@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  bot:
+    build: .
+    env_file:
+      - .env
+    depends_on:
+      - db
+    networks:
+      - botnet
+
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: raul
+      POSTGRES_PASSWORD: raul333
+      POSTGRES_DB: game_bot
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - botnet
+
+networks:
+  botnet:
+
+volumes:
+  postgres_data:
