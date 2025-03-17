@@ -2,9 +2,10 @@ import os
 import asyncio
 from aiogram import Router, types, Bot
 from aiogram.filters import Command
+from hendlers.ls.player import cached_photo_path20
 from keyboards import penalty_accept_keyboard, group_simbols_for_penalty_att, group_simbols_for_penalty_def
 from db_moves.add_db import add_matches, init_player_statistics, update_user_coins, update_user_statistics, use_el_in_game
-from db_moves.get_db import check_user_el_in_game, get_player_best_win_streak, get_player_win_streak, get_player_match_points
+from db_moves.get_db import check_player_design, check_user_el_in_game, check_user_role, get_player_best_win_streak, get_player_win_streak, get_player_match_points
 from datetime import datetime, time
 from aiogram.exceptions import TelegramRetryAfter, TelegramBadRequest
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -66,6 +67,8 @@ async def start_penalty_game(message: types.Message):
     user_id = message.from_user.id
     username = message.from_user.username
 
+    player_role = await check_player_design(user_id=user_id)
+
     # group_simbols_for_penalty_att.inline_keyboard.remove(player_kb)
     # group_simbols_for_penalty_att.inline_keyboard.remove(player_kb)
 
@@ -77,7 +80,7 @@ async def start_penalty_game(message: types.Message):
 
     
     sent_message = await message.reply_photo(
-        photo=cached_photo_path5,
+        photo=cached_photo_path5 if not player_role else cached_photo_path20,
         caption=f"<b>Игрок @{username}</b> вызывает на дуэль в <i>Пенальти!⚽</i>\n\n"
                 "Нажмите <b>Принять вызов</b>, чтобы присоединиться!",
         parse_mode='HTML',
@@ -186,6 +189,12 @@ async def finish_round_or_continue(game, result):
     pl1_best_win_streak = await get_player_best_win_streak(user_id=game["player1"]["id"], game_id=2)
     pl2_best_win_streak = await get_player_best_win_streak(user_id=game["player2"]["id"], game_id=2)
 
+    request1_role = await check_user_role(player1["id"])
+    player1_role = [role["role"] for role in request1_role][0]
+
+    request2_role = await check_user_role(player2["id"])
+    player2_role = [role["role"] for role in request2_role][0]
+
     # Условие завершения игры
     if (game["round"] >= 6 and (player1['score'] != player2['score']) and game['round'] % 2 != 0) or (game['round'] > 10):
         final_score = f"{player1['score']} : {player2['score']}\n"
@@ -239,8 +248,8 @@ async def finish_round_or_continue(game, result):
             start_time=start_time,
         )
         print(history_1, history_2)
-        if winner: await update_user_coins(coins=10, user_id=winner["id"])
         if winner == player1:
+            await update_user_coins(10 if player1_role == 'player' else 20, winner["id"])
             await update_user_statistics(
                 user_id=player1["id"],
                 game_id=2,
@@ -270,6 +279,7 @@ async def finish_round_or_continue(game, result):
             history_1.clear()
             history_2.clear()
         elif winner == player2:
+            await update_user_coins(10 if player2_role == 'player' else 20, winner["id"])
             await update_user_statistics(
                 user_id=player2["id"],
                 game_id=2,
@@ -361,6 +371,8 @@ async def finish_round_or_continue(game, result):
 @penalty_router.callback_query(lambda c: c.data == "penalty_accept")
 async def handle_penalty_accept(callback_query: types.CallbackQuery):
     start_time = time.time()
+    global help_history
+    help_history = []
     user_id = callback_query.from_user.id
     username = callback_query.from_user.username
     message = callback_query.message

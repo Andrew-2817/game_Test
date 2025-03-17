@@ -1,3 +1,4 @@
+from datetime import datetime
 from db import get_db_connection
 
 
@@ -167,3 +168,59 @@ async def check_user_el_in_game(user_id:int):
         await conn.close()
     
     return [player[i]["sale_name"] for i in range(len(player))]
+
+async def check_user_role(user_id: int):
+    conn = await get_db_connection()
+    try:
+        user_role = await conn.fetch("""
+            SELECT role
+            FROM users
+            where user_id = $1
+        """, user_id)
+    finally:
+        await conn.close()
+    
+    return user_role
+
+
+async def time_difference_premium(user_id: int):
+    conn = await get_db_connection()
+    date_now = datetime.now().replace(second=0, microsecond=0)
+    
+    try:
+        # Извлекаем разницу во времени
+        user_role = await conn.fetch("""
+            SELECT end_date_of_premium - $1 AS time_diff
+            FROM users
+            WHERE user_id = $2
+        """, date_now, user_id)
+
+        if user_role:
+            # Получаем значение разницы из результата запроса
+            difference = user_role[0]['time_diff']
+            return difference
+        else:
+            return None
+            
+    finally:
+        await conn.close()
+
+
+async def check_player_design(user_id: int):
+    conn = await get_db_connection()
+    try:
+        user_role = await conn.fetch("""
+            SELECT premium_design
+            FROM users
+            WHERE user_id = $1
+        """, user_id)
+
+        if user_role:
+            # Получаем значение разницы из результата запроса
+            design = user_role[0]['premium_design']
+            return design
+        else:
+            return None
+            
+    finally:
+        await conn.close()

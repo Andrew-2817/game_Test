@@ -1,7 +1,11 @@
-from hendlers.ls.player  import player_router, cached_photo_path3, cached_photo_path5, cached_photo_path12, cached_photo_path13,  info_cuefa_keyboard
+from db_moves.get_db import check_user_role
+from hendlers.ls.player  import player_router, cached_photo_path3, cached_photo_path5, cached_photo_path12, cached_photo_path13,  info_cuefa_keyboard, cached_photo_path20, cached_photo_path21, cached_photo_path24, cached_photo_path19
 from aiogram.types import CallbackQuery, InputMediaPhoto
+from aiogram import types
+import os
 from keyboards import info_keyboard
 import time
+
 
 
 
@@ -18,11 +22,14 @@ async def bot_info(callback_query: CallbackQuery):
     )
 
 @player_router.callback_query(lambda c : c.data=="info_RPS") 
-async def bot_info_RPS(callback_query: CallbackQuery): 
+async def bot_info_RPS(callback_query: CallbackQuery):
+    user_id = callback_query.from_user.id
+    request_role = await check_user_role(user_id)
+    player_role = [role["role"] for role in request_role][0] 
  
     await callback_query.message.edit_media( 
         media=InputMediaPhoto( 
-            media=cached_photo_path3, 
+            media=cached_photo_path3 if player_role == 'player' else cached_photo_path21, 
             caption="<b>Игра Цуефа 🪨✂️🧻</b>\n\n" 
             "Это всем знакомая игра, где ты играешь против другого игрока и тебе нужно выбрать один из трех вариантов: камень🪨 ножницы✂️ или бумага🧻\n\n" 
             "Ты побеждаешь при следующих раскладах:\n" 
@@ -41,11 +48,14 @@ async def bot_info_RPS(callback_query: CallbackQuery):
 
 @player_router.callback_query(lambda c : c.data=="info_footbal") 
 async def bot_info_football(callback_query: CallbackQuery): 
-    start_time = time.time() 
+    start_time = time.time()
+    user_id = callback_query.from_user.id
+    request_role = await check_user_role(user_id)
+    player_role = [role["role"] for role in request_role][0] 
  
     await callback_query.message.edit_media( 
         media=InputMediaPhoto( 
-            media=cached_photo_path5, 
+            media=cached_photo_path5 if player_role == 'player' else cached_photo_path20, 
             caption="<b>Игра Пенальти⚽</b>\n\n" 
             "Игра для всех любителей футбола. Правила предельно просты: тебе нужно выбрать одну из цифр - 1, 2, или 3, то есть угол, куда ты будешь бить\n" 
             "Твой соперник(Вратарь) должен угадать угол\n" 
@@ -64,11 +74,14 @@ async def bot_info_football(callback_query: CallbackQuery):
 
 @player_router.callback_query(lambda c : c.data=="info_match") 
 async def bot_info_match(callback_query: CallbackQuery): 
-    start_time = time.time() 
+    start_time = time.time()
+    user_id = callback_query.from_user.id
+    request_role = await check_user_role(user_id)
+    player_role = [role["role"] for role in request_role][0] 
  
     await callback_query.message.edit_media( 
         media=InputMediaPhoto( 
-            media=cached_photo_path12, 
+            media=cached_photo_path12 if player_role == 'player' else cached_photo_path24, 
             caption="<b>Как проходят матчи</b>\n\n" 
             "Чтобы начать матч, тебе нужно перейти в |игровой чат| и ввести подходящую коману в зависимрсти от того, в какую игру ты хочешь сыграть\n" 
             "После создается приглашение для других участников на |1 минуту|\n" 
@@ -84,11 +97,14 @@ async def bot_info_match(callback_query: CallbackQuery):
 
 @player_router.callback_query(lambda c : c.data=="info_tournaments") 
 async def bot_info_tournaments(callback_query: CallbackQuery): 
-    start_time = time.time() 
+    start_time = time.time()
+    user_id = callback_query.from_user.id
+    request_role = await check_user_role(user_id)
+    player_role = [role["role"] for role in request_role][0] 
  
     await callback_query.message.edit_media( 
         media=InputMediaPhoto( 
-            media=cached_photo_path13, 
+            media=cached_photo_path13 if player_role == 'premium' else cached_photo_path19, 
             caption="<b>Турниры</b>\n\n" 
             "Турниры проходят раз в неделю по воскресеньям в ХХ:00\n" 
             "Формат турнира представлет собой сетку плей-офф(игра на вылет): если побеждаешь, то проходишь дальше, если проигрываешь, то вылетаешь\n" 

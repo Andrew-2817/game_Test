@@ -3,10 +3,11 @@ import time
 import asyncio
 from aiogram import Router, types, Bot
 from aiogram.filters import Command
+from hendlers.ls.player import cached_photo_path21
 from keyboards import group_simbols_for_KMN, CMN_accept_keyboard
 from db import get_db_connection
 from db_moves.add_db import add_shop, add_user, init_player_statistics, update_user_coins, update_user_statistics, add_matches, use_el_in_game
-from db_moves.get_db import check_user_el_in_game, get_player_match_points, get_player_win_streak, get_player_best_win_streak
+from db_moves.get_db import check_player_design, check_user_el_in_game, check_user_role, get_player_match_points, get_player_win_streak, get_player_best_win_streak
 from datetime import datetime
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
@@ -50,6 +51,10 @@ def is_player_in_game(user_id):
 async def start_game_command(message: types.Message):
     
     user_id = message.from_user.id
+    request_role = await check_user_role(user_id)
+    player_role = [role["role"] for role in request_role][0]
+
+    player_design = await check_player_design(user_id)
     username = message.from_user.username
     join_date = datetime.now()
 
@@ -68,7 +73,7 @@ async def start_game_command(message: types.Message):
         return
 
     sent_message = await message.reply_photo(
-        photo=cached_photo_path3,
+        photo=cached_photo_path3 if not player_design else cached_photo_path21,
         caption=f"<b>Игрок @{message.from_user.username}</b> вызывает на дуэль в <i>Цуефа!🪨✂️📃</i>\n"
         "Нажмите <b>Принять вызов</b>, чтобы присоединиться!",
         parse_mode='HTML',
@@ -94,6 +99,8 @@ choices = {
 async def handle_CMN_accept(callback_query: types.CallbackQuery):
     user_id = callback_query.from_user.id
     username = callback_query.from_user.username
+    global help_history
+    help_history = []
     message = callback_query.message
     author_id = message.reply_to_message.from_user.id
     author_username = message.reply_to_message.from_user.username
@@ -154,6 +161,11 @@ async def start_round_timer(message_id):
     p2_win_streak = await get_player_win_streak(user_id=game["player2"]["id"], game_id=1)
     pl1_best_win_streak = await get_player_best_win_streak(user_id=game["player1"]["id"], game_id=1)
     pl2_best_win_streak = await get_player_best_win_streak(user_id=game["player2"]["id"], game_id=1)
+    request1_role = await check_user_role(game["player1"]["id"])
+    player1_role = [role["role"] for role in request1_role][0]
+
+    request2_role = await check_user_role(game["player2"]["id"])
+    player2_role = [role["role"] for role in request2_role][0]
    
     if "start_time" not in game:
         game["start_time"] = datetime.now()
@@ -197,7 +209,7 @@ async def start_round_timer(message_id):
                     "nognichi" : pl2_choice.count('nognichi'),
                     "bumaga" : pl2_choice.count('bumaga')
                 }
-                await update_user_coins(coins=10, user_id=game["player1"]["id"])
+                await update_user_coins(10 if player1_role == 'player' else 20, game["player1"]["id"])
                 print(often_choice_pl1, often_choice_pl2, pl1_choice)
                 # pl_win_streak = await get_player_win_streak(user_id=game["player1"]["id"], game_id=1)
                 # p2_win_streak = await get_player_win_streak(user_id=game["player2"]["id"], game_id=1)
@@ -262,7 +274,7 @@ async def start_round_timer(message_id):
                     "nognichi" : pl2_choice.count('nognichi'),
                     "bumaga" : pl2_choice.count('bumaga')
                 }
-                await update_user_coins(coins=10, user_id=game["player2"]["id"])
+                await update_user_coins(10 if player2_role == 'player' else 20, game["player2"]["id"])
                 await add_matches(
                     game_id=1, 
                     player1_id=game["player1"]["id"], 
@@ -467,36 +479,14 @@ def reset_round(game):
 
 
 
-@KMN_router.callback_query(lambda c: c.data in ["help_in_kmn","supershot_in_kmn"])
+@KMN_router.callback_query(lambda c: c.data in ["supershot_in_kmn"])
 async def handle_defense_kmn(callback_query: types.CallbackQuery):
     global help_history
     user_id = callback_query.from_user.id
     user_el = await check_user_el_in_game(user_id=user_id)
     choice = callback_query.data
     if user_id not in help_history:
-        if choice == "help_in_kmn":
-            if 'Подсказка' in user_el:
-                shoot_various = ['left', 'center', 'right']
-                for i in shoot_various:
-                    if i != help_penalty_text[0]:
-                        shoot_various.remove(i)
-                        break
-                # shoot_various.remove(help_penalty_text[0])
-                print(choice == "help_in_kmn", len(shoot_various)!=3)
-                if len(shoot_various)!=3:
-                    await callback_query.answer(
-                        text=f"Игрок пробил в {shoot_various[0]} или {shoot_various[1]}",
-                        show_alert=True
-                    )
-                    await use_el_in_game(user_id = user_id, sale_name='Подсказка')
-                help_history.append(user_id)
-            elif 'Подсказка' not in user_el:
-                await callback_query.answer(
-                        text=f"У вас нет этого бонуса",
-                        show_alert=True
-                    )
-
-        elif choice =="supershot_in_kmn":
+        if choice =="supershot_in_kmn":
             if 'Суперудар' in user_el:
                 global supershot_plus
                 supershot_plus+=1

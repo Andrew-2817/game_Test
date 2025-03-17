@@ -1,9 +1,14 @@
+from aiogram import types
+import os
 from hendlers.ls.player  import player_router, cached_photo_path10, cached_photo_path5, cached_photo_path3
 from aiogram.types import CallbackQuery, InputMediaPhoto, UserProfilePhotos
-from db_moves.get_db import  display_penalty_cuefa_leaderboard, display_main_leaderboard
+from db_moves.get_db import  check_player_design, check_user_role, display_penalty_cuefa_leaderboard, display_main_leaderboard
 from keyboards import  leadboards_season_back_keyboards, leadboards_keyboard, leadboards_season_3_back_keyboards
 from db import get_db_connection
 import time
+
+
+cached_photo_path24 = types.FSInputFile(os.path.join("img/default", "ranking_default.jpg"))
 
 
 #ЗДЕСЬ ФОТО НЕ НУЖНО
@@ -22,9 +27,12 @@ async def start_reg_on_tour(callback_query: CallbackQuery):
 @player_router.callback_query(lambda c: c.data=="start_leadboards")
 async def start_reg_on_tour(callback_query: CallbackQuery):
 
+    user_id = callback_query.from_user.id
+    player_role = await check_player_design(user_id)
+
     await callback_query.message.edit_media(
         media=InputMediaPhoto(
-            media=cached_photo_path10,
+            media=cached_photo_path10 if player_role else cached_photo_path24,
             caption="Каждый месяц таблица лидеров обновляется\n\n"
             "1 место в Сезонной ТЛ: 500₽\n"
             "1 место в Турнирной ТЛ: 1000₽\n\n"

@@ -39,8 +39,15 @@ start_tour = InlineKeyboardButton(text="Турниры 🏆", callback_data="sta
 start_match = InlineKeyboardButton(text="Играть 🎮", callback_data="start_match")
 # Кнопка "Магазин"
 start_shop = InlineKeyboardButton(text="Магазин 🛍️", callback_data="start_shop")
+become_premium = InlineKeyboardButton(text = 'Преобрести премиум ✨', callback_data='become_premium')
 
-start_keyboard = InlineKeyboardMarkup(inline_keyboard=[[start_match ,start_profile],[start_leadboards], [start_tour, start_shop],[start_back_button]])
+premium_design = InlineKeyboardButton(text='Эксклюзивный дизайн', callback_data='premium_design')
+standart_design = InlineKeyboardButton(text='Стандартный дизайн', callback_data='premium_design')
+
+start_keyboard = InlineKeyboardMarkup(inline_keyboard=[[start_match ,start_profile],[start_leadboards], [start_tour, start_shop], [become_premium],[start_back_button]])
+start_keyboard_premium = InlineKeyboardMarkup(inline_keyboard=[[start_match ,start_profile],[start_leadboards], [start_tour, start_shop], [become_premium],[premium_design],[start_back_button]])
+start_keyboard_standart = InlineKeyboardMarkup(inline_keyboard=[[start_match ,start_profile],[start_leadboards], [start_tour, start_shop], [become_premium],[standart_design],[start_back_button]])
+
 
 #ПАК ИЗ КНОПОК ДЛЯ "ПРОФИЛЬ"(кнопка)
 #кнопка "Назад"
@@ -70,7 +77,7 @@ play_RPS = InlineKeyboardButton(text="Цуефа 🪨✂️📃", callback_data=
 play_21 = InlineKeyboardButton(text="21 ♠️♥️", callback_data="profile_21")
 play_treasures = InlineKeyboardButton(text="Сокровища 💰🗝️", callback_data="profile_treasures")
 
-play_keyboard = InlineKeyboardMarkup(inline_keyboard=[[play_RPS, play_penality], [play_21, play_treasures], [play_back]])
+play_keyboard = InlineKeyboardMarkup(inline_keyboard=[[play_RPS, play_penality], [play_treasures, play_21], [play_back]])
 
 # Кнопка для выхода из игры - Личка
 
@@ -95,7 +102,7 @@ history_of_matches_penalty = InlineKeyboardButton(text="Пенальти ⚽", c
 history_of_matches_cuefa = InlineKeyboardButton(text="Цуефа 🪨✂️📃", callback_data="history_cuefa")
 history_of_matches_21 = InlineKeyboardButton(text="21 ♠️♥️", callback_data="history_21")
 history_of_matches_stakanchiki = InlineKeyboardButton(text="Сокровища 💰🗝️", callback_data="history_stakanchiki")
-history_of_matches_keyboard = InlineKeyboardMarkup(inline_keyboard=[[history_of_matches_penalty, history_of_matches_cuefa] ,[history_of_matches_21 ,history_of_matches_stakanchiki], [history_of_matches_back]])
+history_of_matches_keyboard = InlineKeyboardMarkup(inline_keyboard=[[history_of_matches_cuefa, history_of_matches_penalty] ,[history_of_matches_stakanchiki, history_of_matches_21], [history_of_matches_back]])
 
 # ПАК ИЗ КНОПОКА ДЛЯ "ИСТОРИЯ МАТЧЕЙ" -> ИГРА
 history_of_matches_back = InlineKeyboardButton(text="Назад 🔙", callback_data="history_of_matches")
@@ -185,7 +192,7 @@ defense_center = InlineKeyboardButton(text="⬆️", callback_data="defense_cent
 defense_right = InlineKeyboardButton(text="➡️", callback_data="defense_right")
 defense_buttons_penki_ls = InlineKeyboardMarkup(inline_keyboard=[
     [defense_left, defense_center, defense_right]
-]) 
+])
 
 
 #кнопки для игры в сокорвища 
@@ -227,8 +234,7 @@ KMN_kamen = InlineKeyboardButton(text="🪨", callback_data="kamen")
 KMN_bumaga = InlineKeyboardButton(text="📃", callback_data="bumaga")
 KMN_nognichi = InlineKeyboardButton(text="✂️", callback_data="nognichi")
 supershot_in_kmn = InlineKeyboardButton(text="Суперудар ⚽", callback_data="supershot_in_kmn")
-help_in_kmn = InlineKeyboardButton(text="Подсказка 💡", callback_data="help_in_kmn")
-group_simbols_for_KMN = InlineKeyboardMarkup(inline_keyboard=[[KMN_kamen, KMN_bumaga,KMN_nognichi], [supershot_in_kmn], [help_in_kmn]])
+group_simbols_for_KMN = InlineKeyboardMarkup(inline_keyboard=[[KMN_kamen, KMN_bumaga,KMN_nognichi], [supershot_in_kmn]])
 
 # Кнопки для игры Пенальти
 penalty_left = InlineKeyboardButton(text="⬅️", callback_data="att_left")
@@ -283,3 +289,7 @@ group_simbols_for_ocko_def = InlineKeyboardMarkup(
 #ПАК ИЗ КНОПОК ДЛЯ ИНФО О БОТЕ->ЦУЕФА
 info_cuefa_back = InlineKeyboardButton(text="Назад 🔙", callback_data="info") 
 info_cuefa_keyboard = InlineKeyboardMarkup(inline_keyboard = [[info_cuefa_back]])
+
+
+
+# become_premium_keyboard = InlineKeyboardMarkup(inline_keyboard=[[become_premium]])

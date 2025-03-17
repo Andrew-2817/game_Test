@@ -2,9 +2,10 @@ import os
 import asyncio
 from aiogram import Router, types, Bot
 from aiogram.filters import Command
+from hendlers.ls.player import cached_photo_path17, cached_photo_path22
 from keyboards import  group_simbols_for_ocko_att, group_simbols_for_ocko_def, ochko_accept_keyboard
 from db_moves.add_db import add_matches, init_player_statistics, update_user_coins, update_user_statistics, use_el_in_game
-from db_moves.get_db import check_user_el_in_game, get_player_best_win_streak, get_player_win_streak, get_player_match_points
+from db_moves.get_db import check_player_design, check_user_el_in_game, check_user_role, get_player_best_win_streak, get_player_win_streak, get_player_match_points
 from datetime import datetime, time, timedelta
 from aiogram.exceptions import TelegramRetryAfter, TelegramBadRequest
 import time
@@ -59,6 +60,7 @@ async def start_21_game(message: types.Message):
         return
 
     user_id = message.from_user.id
+    player_role = await check_player_design(user_id=user_id)
     username = message.from_user.username
     await init_player_statistics(user_id=user_id)
     if is_player_in_game(user_id):
@@ -66,7 +68,7 @@ async def start_21_game(message: types.Message):
         return
 
     sent_message = await message.reply_photo(
-        photo=cached_photo_path2,
+        photo=cached_photo_path22 if not player_role else cached_photo_path17,
         caption=f"Игрок @{username} вызывает на игру в 21 ♠️♥️!\n\n"
         "Нажмите <b>Принять вызов</b>, чтобы присоединиться!",
         parse_mode="HTML",
@@ -141,6 +143,11 @@ async def handle_accept_21(callback_query: types.CallbackQuery):
         player1_id = active_games[game_message.message_id]["player1"]['id']
         player2_id = active_games[game_message.message_id]["player2"]['id']
 
+        request1_role = await check_user_role(player1_id)
+        player1_role = [role["role"] for role in request1_role][0]
+        request2_role = await check_user_role(player2_id)
+        player2_role = [role["role"] for role in request2_role][0]
+
         # сохраняем победителя и проигравшего для статистики
         winner_id = player1_id if active_games[game_message.message_id]["player1"]['username'] == winner else player2_id
         losser_id = player1_id if active_games[game_message.message_id]["player1"]['username'] != winner else player2_id
@@ -155,7 +162,6 @@ async def handle_accept_21(callback_query: types.CallbackQuery):
             )
             
         )
-        await update_user_coins(coins=10, user_id=winner_id)
         # сохраняем матч
         await add_matches(
             game_id=3,
@@ -165,6 +171,7 @@ async def handle_accept_21(callback_query: types.CallbackQuery):
             start_time= datetime.now()
         )
         if winner_id == player1_id:
+            await update_user_coins(10 if player1_role == 'player' else 20, winner_id)
             await update_user_statistics(
                 user_id=player1_id,
                 game_id=3,
@@ -192,6 +199,7 @@ async def handle_accept_21(callback_query: types.CallbackQuery):
                 match_points=0 if await get_player_match_points(user_id=player2_id, game_id=3) < 10 else -10
             )
         elif winner_id == player2_id:
+            await update_user_coins(10 if player2_role == 'player' else 20, winner_id)
             await update_user_statistics(
                 user_id=player2_id,
                 game_id=3,
@@ -234,6 +242,12 @@ async def handle_player_action(callback_query: types.CallbackQuery):
     game = active_games.get(game_message_id)
     global remove_big_values
     global remove_small_values
+
+    request1_role = await check_user_role(game['player1']['id'])
+    player1_role = [role["role"] for role in request1_role][0]
+    request2_role = await check_user_role(game['player2']['id'])
+    player2_role = [role["role"] for role in request2_role][0]
+
     if not game:
         await callback_query.answer("Игра не найдена!", show_alert=True)
         return
@@ -308,7 +322,6 @@ async def handle_player_action(callback_query: types.CallbackQuery):
                 parse_mode="HTML"
             )       
         )
-        await update_user_coins(coins=10, user_id=winner_id)
         # добавляем матч
         await add_matches(
             game_id=3,
@@ -318,6 +331,7 @@ async def handle_player_action(callback_query: types.CallbackQuery):
             start_time= datetime.now()
         )
         if winner_id == game['player1']['id']:
+            await update_user_coins(10 if player1_role == 'player' else 20, winner_id)
             await update_user_statistics(
                 user_id=game['player1']['id'],
                 game_id=3,
@@ -345,6 +359,7 @@ async def handle_player_action(callback_query: types.CallbackQuery):
                 match_points=0 if await get_player_match_points(user_id=game['player2']['id'], game_id=3) < 10 else -10
             )
         elif winner_id == game['player2']['id']:
+            await update_user_coins(10 if player2_role == 'player' else 20, winner_id)
             await update_user_statistics(
                 user_id=game['player2']['id'],
                 game_id=3,
@@ -392,7 +407,6 @@ async def handle_player_action(callback_query: types.CallbackQuery):
                 parse_mode="HTML"
             )
         )
-        await update_user_coins(coins=10, user_id=winner_id)
         # добавляем матч
         await add_matches(
             game_id=3,
@@ -402,6 +416,7 @@ async def handle_player_action(callback_query: types.CallbackQuery):
             start_time= datetime.now()
         )
         if winner_id == game['player1']['id']:
+            await update_user_coins(10 if player1_role == 'player' else 20, winner_id)
             await update_user_statistics(
                 user_id=game['player1']['id'],
                 game_id=3,
@@ -429,6 +444,7 @@ async def handle_player_action(callback_query: types.CallbackQuery):
                 match_points=0 if await get_player_match_points(user_id=game['player2']['id'], game_id=3) < 10 else -10
             )
         elif winner_id == game['player2']['id']:
+            await update_user_coins(10 if player2_role == 'player' else 20, winner_id)
             await update_user_statistics(
                 user_id=game['player2']['id'],
                 game_id=3,
@@ -563,6 +579,11 @@ async def finish_game(game_message_id):
     pl1_best_win_streak = await get_player_best_win_streak(user_id=game["player1"]["id"], game_id=3)
     pl2_best_win_streak = await get_player_best_win_streak(user_id=game["player2"]["id"], game_id=3)
 
+    request1_role = await check_user_role(game['player1']['id'])
+    player1_role = [role["role"] for role in request1_role][0]
+    request2_role = await check_user_role(game['player2']['id'])
+    player2_role = [role["role"] for role in request2_role][0]
+
     # достаем карты игроков 
     players_summary = (
         f"🎮 Игрок 1 (<b>{player1['username']}</b>) Карты: {', '.join(c[0] for c in player1['cards'])}. Очки: {player1['score']}.\n"
@@ -601,7 +622,6 @@ async def finish_game(game_message_id):
             parse_mode="HTML"
         )
     )
-    if winner: await update_user_coins(coins=10, user_id=winner["id"])
     # добавляем матч
     await add_matches(
         game_id=3,
@@ -612,6 +632,7 @@ async def finish_game(game_message_id):
     )
     # проверка на налицие победителя
     if winner["id"] == player1["id"]:
+        await update_user_coins(10 if player1_role == 'player' else 20, winner["id"])
         # обновляем статистику каждому игроку
         await update_user_statistics(
                 user_id=player1["id"],
@@ -640,6 +661,7 @@ async def finish_game(game_message_id):
             match_points=0 if await get_player_match_points(user_id=losser["id"], game_id=3) < 10 else -10
         )
     elif winner["id"] == player2["id"]:
+        await update_user_coins(10 if player2_role == 'player' else 20, winner["id"])
         # обновляем статистику каждому игроку
         await update_user_statistics(
                 user_id=player2["id"],

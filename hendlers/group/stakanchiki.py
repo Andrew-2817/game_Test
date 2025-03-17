@@ -2,9 +2,10 @@ import os
 import asyncio
 from aiogram import Router, types, Bot
 from aiogram.filters import Command
+from hendlers.ls.player import cached_photo_path23
 from keyboards import stakanchiki_accept_keyboard, group_simbols_for_stakanchiki_att, group_simbols_for_stakanchiki_def
 from db_moves.add_db import add_matches, init_player_statistics, update_user_coins, update_user_statistics, use_el_in_game
-from db_moves.get_db import check_user_el_in_game, get_player_best_win_streak, get_player_win_streak, get_player_match_points
+from db_moves.get_db import check_player_design, check_user_el_in_game, check_user_role, get_player_best_win_streak, get_player_win_streak, get_player_match_points
 from datetime import datetime, time
 from aiogram.exceptions import TelegramRetryAfter, TelegramBadRequest
 import time
@@ -65,6 +66,8 @@ async def start_penalty_game(message: types.Message):
     user_id = message.from_user.id
     username = message.from_user.username
 
+    player_role = await check_player_design(user_id=user_id)
+
     await init_player_statistics(user_id=user_id)
     
     if is_player_in_game(user_id):
@@ -73,7 +76,7 @@ async def start_penalty_game(message: types.Message):
 
     
     sent_message = await message.reply_photo(
-        photo=cached_photo_path5,
+        photo=cached_photo_path5 if not player_role else cached_photo_path23,
         caption=f"<b>Игрок @{username}</b> вызывает на дуэль в <i>Сокровища 💰🗝️!</i>\n\n"
                 "Нажмите <b>Принять вызов</b>, чтобы присоединиться!",
         parse_mode='HTML',
@@ -153,12 +156,12 @@ async def timeout_handler(game_message_id, is_attack_phase):
                 defender["history"].append("💰")
                 #ПРИ ОПОЗДАНИЕ ДОПОЛНЕНИЕ К ТЕКСТУ(НАП)
                 result = f"{attacker['username']} не успел выбрать"
+                defender["score"] += 1
                 game["round"] += 1
                 await finish_round_or_continue(game, result)
         else:
             if defender["current_action"] is None:  # Защитник не выбрал
                 if attacker["current_action"] is not None:
-                    attacker["score"] += 1
                     defender["history"].append("🔒")
                     #ПРИ ОПОЗДАНИЕ ДОПОЛНЕНИЕ К ТЕКСТУ(ДЕФ)
                     result = f"{defender['username']} не успел выбрать"
@@ -180,6 +183,12 @@ async def finish_round_or_continue(game, result):
     p2_win_streak = await get_player_win_streak(user_id=game["player2"]["id"], game_id=4)
     pl1_best_win_streak = await get_player_best_win_streak(user_id=game["player1"]["id"], game_id=4)
     pl2_best_win_streak = await get_player_best_win_streak(user_id=game["player2"]["id"], game_id=4)
+
+    request1_role = await check_user_role(player1["id"])
+    player1_role = [role["role"] for role in request1_role][0]
+
+    request2_role = await check_user_role(player2["id"])
+    player2_role = [role["role"] for role in request2_role][0]
 
     # Условие завершения игры
     if (game["round"] >= 6 and (player1['score'] != player2['score']) and game['round'] % 2 != 0) or (game['round'] > 10):
@@ -226,7 +235,6 @@ async def finish_round_or_continue(game, result):
         else:
             winner = None
             loser = None
-        if winner: await update_user_coins(coins=10, user_id=winner["id"])
         await add_matches(
             game_id=4,
             player1_id=player1["id"],
@@ -235,6 +243,7 @@ async def finish_round_or_continue(game, result):
             start_time=start_time,
         )
         if winner == player1:
+            await update_user_coins(10 if player1_role == 'player' else 20, winner["id"])
             await update_user_statistics(
                 user_id=player1["id"],
                 game_id=4,
@@ -262,6 +271,7 @@ async def finish_round_or_continue(game, result):
                 match_points=0 if await get_player_match_points(user_id=loser["id"], game_id=4) < 10 else -10
             )
         elif winner == player2:
+            await update_user_coins(10 if player2_role == 'player' else 20, winner["id"])
             await update_user_statistics(
                 user_id=player2["id"],
                 game_id=4,

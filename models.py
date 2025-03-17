@@ -44,6 +44,8 @@ async def create_tables():
                 join_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 total_days_in_game INTEGER DEFAULT 0,
                 coins INTEGER DEFAULT 0,
+                end_date_of_premium TIMESTAMP,
+                premium_design BOOLEAN DEFAULT FALSE,
                 role TEXT DEFAULT 'player'
             );
         """)

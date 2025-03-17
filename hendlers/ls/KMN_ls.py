@@ -1,5 +1,6 @@
 from aiogram.types import CallbackQuery, Message, InlineKeyboardMarkup, InlineKeyboardButton
-from hendlers.ls.player import player_router, cached_photo_path5
+from db_moves.get_db import check_player_design, check_user_role
+from hendlers.ls.player import player_router, cached_photo_path5, cached_photo_path21
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext 
 from db import get_db_connection
@@ -201,6 +202,7 @@ class KMN(StatesGroup):
 @player_router.callback_query(lambda c: c.data == "profile_RPS")
 async def ls_penki(callback_query: CallbackQuery, state: FSMContext):
     user_id = callback_query.from_user.id
+    player_role = await check_player_design(user_id=user_id)
     print('fffff')
     # Когда выбрали игру входим в сосотояние
     await state.set_state(KMN.waiting_for_message)
@@ -244,7 +246,7 @@ async def ls_penki(callback_query: CallbackQuery, state: FSMContext):
                 # Отправляем вызов пользователю 
                 await message.bot.send_photo(
                     chat_id=opponent_id,
-                    photo=cached_photo_path3,
+                    photo=cached_photo_path3 if not player_role else cached_photo_path21,
                     caption=f"<b>Игрок @{callback_query.from_user.username}</b> вызывает вас на дуэль в <i>Цуефа!🪨✂️📃</i>\n\n"
                             "Нажмите <b>Принять вызов</b>, чтобы присоединиться!",
                     parse_mode="HTML",

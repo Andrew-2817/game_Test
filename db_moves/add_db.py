@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from db import get_db_connection
 
 
@@ -161,3 +161,63 @@ async def use_el_in_game(user_id:int, sale_name: str):
         """, user_id, sale_name)
     finally:
         await conn.close()
+
+async def buy_premium_or_check_end_date(user_id: int, type_change:str):
+    conn = await get_db_connection()
+    # Если только что купили подписку, то устанавливаем время окончания действия подписки
+    if type_change == 'buy':
+        date_now = datetime.now().replace(second=0, microsecond=0) + timedelta(minutes=20)
+        try:
+            await conn.fetch("""
+                UPDATE users
+                SET end_date_of_premium = $1,
+                    role = $2
+                WHERE user_id = $3
+            """, date_now, 'premium', user_id)
+        finally:
+            await conn.close()
+    
+    # если нажали на кнопку купить подписку, но у нас уже роль премиум
+    # тогда если подписка истекла то меняем роль на player
+    # если еще не истекла то в алерте выводим сколько еще действует подписка
+    elif type_change == 'update':
+        date_now = datetime.now().replace(second=0, microsecond=0)
+        try:
+            await conn.fetch("""
+                UPDATE users
+                SET end_date_of_premium = NULL,
+                    role = $1
+                WHERE (user_id = $2) and (end_date_of_premium <= $3) and role = 'premium'
+            """, 'player', user_id, date_now)
+        finally:
+            await conn.close()
+
+async def shop_bonus_for_premium(user_id: int):
+    conn = await get_db_connection()
+    try:
+        await conn.fetch("""
+        UPDATE shop
+        SET user_count = CASE 
+            WHEN sale_name = 'Суперудар' THEN user_count + 5
+            WHEN sale_name = 'Суперсейв' THEN user_count + 5
+            WHEN sale_name = 'Подсказка' THEN user_count + 10
+            WHEN sale_name = 'Отмена поражения' THEN user_count + 3
+            WHEN sale_name = 'Билет на частный турнир' THEN user_count + 1
+            ELSE user_count
+        END
+        WHERE user_id = $1 AND sale_name IN ('Суперудар', 'Суперсейв', 'Подсказка', 'Отмена поражения', 'Билет на частный турнир'); 
+        """, user_id)
+    finally:
+        await conn.close()
+
+async def change_user_design(user_id: int):
+    conn = await get_db_connection()
+    try:
+        await conn.fetch("""
+        UPDATE users
+        SET premium_design = NOT premium_design
+        WHERE user_id = $1
+        """, user_id)
+    finally:
+        await conn.close()
+

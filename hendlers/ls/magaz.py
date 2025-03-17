@@ -15,7 +15,7 @@ async def bot_shop(callback_query: CallbackQuery):
     user_coins = await get_user_coins(user_id)
     result = [[record["user_id"], record["sale_name"], record["sale_cost"], record["sale_count"], record["user_count"]] for record in player_el_shop]
     result_name=[
-        f"{result[0][1]}🎟️",f"{result[1][1]}⛔",f"{result[2][1]}🎨", f"{result[3][1]}🧤(Суперпрятка 🔎)",f"{result[4][1]}💡",f"{result[5][1]}⚽(Супернаходка 💰)"
+        f"{result[0][1]}🎨",f"{result[1][1]}🎟️",f"{result[2][1]}⛔", f"{result[3][1]}💡",f"{result[4][1]}🧤(Суперпрятка 🔎)",f"{result[5][1]}⚽(Супернаходка 💰)"
     ]
     output_caption = f""
     for i in range(len(result)):

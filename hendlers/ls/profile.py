@@ -1,11 +1,13 @@
-from hendlers.ls.player  import player_router, bot, man, cached_photo_path17, cached_photo_path5, cached_photo_path3, cached_photo_path15, cached_photo_path16
+from datetime import datetime
+from aiogram import types
+import os
+from hendlers.ls.player  import player_router, bot, man, cached_photo_path17, cached_photo_path5, cached_photo_path3, cached_photo_path15, cached_photo_path16, cached_photo_path20, cached_photo_path21, cached_photo_path22, cached_photo_path23, cached_photo_path25
 from aiogram.types import CallbackQuery, InputMediaPhoto, UserProfilePhotos
-from db_moves.add_db import  update_days_for_user
-from db_moves.get_db import  display_main_statistics, display_total_days
+from db_moves.add_db import  change_user_design, update_days_for_user, buy_premium_or_check_end_date, shop_bonus_for_premium
+from db_moves.get_db import  check_player_design, check_user_role, display_main_statistics, display_total_days, time_difference_premium
 from keyboards import profile_keyboard, history_of_matches_keyboard, history_of_matches_back_keyboard, extended_static_keyboard
 from db import get_db_connection
 import time
-
 
 
 @player_router.callback_query(lambda c: c.data == "start_profile")
@@ -18,6 +20,10 @@ async def bot_profile(callback_query: CallbackQuery):
         "total_days_in_game": (await display_total_days(user_id=user_id))[0]["total_days_in_game"],
         "main_statistic": await display_main_statistics(user_id=user_id)
     }
+    request_role = await check_user_role(user_id)
+    player_role = [role["role"] for role in request_role][0]
+
+    premium_smile = '👑' if player_role == 'premium' else ''
 
     total_days_in_game = user_data["total_days_in_game"]
     main_statistic = user_data["main_statistic"]
@@ -37,7 +43,7 @@ async def bot_profile(callback_query: CallbackQuery):
     await callback_query.message.edit_media(
         media=InputMediaPhoto(
             media=file_id,
-            caption=f"<b>{username}</b>\n\n"
+            caption=f"<b>{username} {premium_smile}</b>\n\n"
                     "Общая статистика:\n\n"
                     f"Количество дней в игре: {total_days_in_game}\n"
                     f"Побед в <b>Цуефа 🪨✂️🧻</b>: {cuefa_win}\n"
@@ -73,7 +79,7 @@ async def bot_info_tournaments(callback_query: CallbackQuery):
     user_id = callback_query.from_user.id
     username = callback_query.from_user.username
 
-    
+    player_role = await check_player_design(user_id)
 
    
     conn = await get_db_connection()
@@ -105,7 +111,7 @@ async def bot_info_tournaments(callback_query: CallbackQuery):
     # Отправляем ответ
     await callback_query.message.edit_media(
         media=InputMediaPhoto(
-            media=cached_photo_path5,
+            media=cached_photo_path5 if not player_role else cached_photo_path20,
             caption=f"История матчей <b>Пенальти ⚽</b>\n\n {rez}",
             parse_mode="HTML",
         ),
@@ -121,7 +127,7 @@ async def bot_info_tournaments(callback_query: CallbackQuery):
     user_id = callback_query.from_user.id
     username = callback_query.from_user.username
 
-    
+    player_role = await check_player_design(user_id)
 
    
     conn = await get_db_connection()
@@ -151,7 +157,7 @@ async def bot_info_tournaments(callback_query: CallbackQuery):
    
     await callback_query.message.edit_media(
         media=InputMediaPhoto(
-            media=cached_photo_path3,
+            media=cached_photo_path3 if not player_role else cached_photo_path21,
             caption=f"История матчей <b>Цуефа 🪨✂️📃</b>\n\n {rez}",
             parse_mode="HTML",
         ),
@@ -167,7 +173,7 @@ async def bot_info_tournaments(callback_query: CallbackQuery):
     user_id = callback_query.from_user.id
     username = callback_query.from_user.username
 
-   
+    player_role = await check_player_design(user_id)
 
    
     conn = await get_db_connection()
@@ -197,7 +203,7 @@ async def bot_info_tournaments(callback_query: CallbackQuery):
     
     await callback_query.message.edit_media(
         media=InputMediaPhoto(
-            media=cached_photo_path15,
+            media=cached_photo_path15 if not player_role else cached_photo_path23,
             caption=f"История матчей <b>Сокровища 💰🗝️</b>\n\n {rez}",
             parse_mode="HTML",
         ),
@@ -213,7 +219,8 @@ async def bot_info_tournaments(callback_query: CallbackQuery):
     user_id = callback_query.from_user.id
     username = callback_query.from_user.username
 
-   
+    player_role = await check_player_design(user_id)
+
     conn = await get_db_connection()
     results = await conn.fetch("""
         SELECT result
@@ -240,7 +247,7 @@ async def bot_info_tournaments(callback_query: CallbackQuery):
 
     await callback_query.message.edit_media(
         media=InputMediaPhoto(
-            media=cached_photo_path17,
+            media=cached_photo_path17 if player_role else cached_photo_path22,
             caption=f"История матчей <b>21 ♠️♥️</b>\n\n {rez}",
             parse_mode="HTML",
         ),
@@ -266,6 +273,12 @@ async def bot_info_tournaments(callback_query: CallbackQuery):
     """, user_id)
     all_21_matches = [row["result"].split(" ") for row in results_21]
     all_21_matches_score = [row[1].split(":") for row in all_21_matches]
+
+    request_role = await check_user_role(user_id)
+    player_role = [role["role"] for role in request_role][0]
+
+    player_design = await check_player_design(user_id)
+
     bj_count = 0
     opponent_list = []
     for i in range(len(all_21_matches)):
@@ -368,7 +381,7 @@ async def bot_info_tournaments(callback_query: CallbackQuery):
     stakanchiki_choice3 = all_statistic[3]["choice_3"]
 
     # Подготовка текста для вывода
-    caption = (
+    caption_premium = (
         f"<b>Полная статистика</b>\n\n"
         " ▸ Цуефа 🪨✂️📃\n"
         " Победа ∙ Ничья ∙ Поражение\n"
@@ -377,7 +390,7 @@ async def bot_info_tournaments(callback_query: CallbackQuery):
         f" ⁃ Камень    🪨:{cuefa_choice1} \n ⁃ Ножницы✂️:{cuefa_choice2} \n ⁃ Бумага     📃:{cuefa_choice3}\n"
         f" Самый частый соперник:\n <b>{op_cuefa[0]}({op_cuefa[1]})</b>\n"
         f" 🎯Процент побед: {cuefa_percent_wins}%\n"
-        f" ⭐Серия побед: {cuefa_win_streak}\n"
+        f" ⭐Серия побед: {cuefa_win_streak} \n"
         f" 🏅Лучшая Серия побед: {cuefa_best_win_streak}\n\n"
         " ▸ Пенальти ⚽\n"
         " Победа ∙ Ничья ∙ Поражение\n"
@@ -386,7 +399,7 @@ async def bot_info_tournaments(callback_query: CallbackQuery):
         f" ⁃ Лево  ⬅️:{penalty_choice1} \n ⁃ Центр⬆️:{penalty_choice2} \n ⁃ Право➡️:{penalty_choice3}\n"
         f" Самый частый соперник:\n <b>{op_penalty[0]}({op_penalty[1]})</b>\n"
         f" 🎯Процент побед: {penalty_percent_wins}%\n"
-        f" ⭐Серия побед: {penalty_win_streak}\n"
+        f" ⭐Серия побед: {penalty_win_streak} \n"
         f" 🏅Лучшая Серия побед: {penalty_best_win_streak}\n\n"
         " ▸ 21 ♠️♥️\n"
         " Победа ∙ Ничья ∙ Поражение\n"
@@ -406,14 +419,62 @@ async def bot_info_tournaments(callback_query: CallbackQuery):
         f" ⭐Серия побед: {stakanchiki_win_streak}\n"
         f" 🏅Лучшая Серия побед: {stakanchiki_best_win_streak}\n\n"
     )
+    default_caption = (
+        f"<b>Полная статистика</b>\n\n"
+        " ▸ Цуефа 🪨✂️📃\n"
+        " Победа ∙ Ничья ∙ Поражение\n"
+        f"{' ' * (6 - len(str(cuefa_wins)) + 1)}{cuefa_wins}{' ' * (16 - len(str(cuefa_wins)) - len(str(cuefa_draws)) + 1)}{cuefa_draws}{' ' * (19 - len(str(cuefa_draws)) + 1 - len(str(cuefa_losses)) - len(str(cuefa_wins)) + 1)}{cuefa_losses}\n"
+        f" 🎯Процент побед: {cuefa_percent_wins}%\n"
+        f" ⭐Серия побед: {cuefa_win_streak}\n"
+        " ▸ Пенальти ⚽\n"
+        " Победа ∙ Ничья ∙ Поражение\n"
+        f"{' ' * (6 - len(str(penalty_wins)) + 1)}{penalty_wins}{' ' * (16 - len(str(penalty_wins)) - len(str(penalty_draws)) + 1)}{penalty_draws}{' ' * (19 - len(str(penalty_draws)) + 1 - len(str(penalty_losses)) - len(str(penalty_wins)) + 1)}{penalty_losses}\n"
+        f" 🎯Процент побед: {penalty_percent_wins}%\n"
+        f" ⭐Серия побед: {penalty_win_streak}\n"
+        " ▸ 21 ♠️♥️\n"
+        " Победа ∙ Ничья ∙ Поражение\n"
+        f"{' ' * (6 - len(str(ochko_wins)) + 1)}{ochko_wins}{' ' * (16 - len(str(ochko_wins)) - len(str(ochko_draws)) + 1)}{ochko_draws}{' ' * (19 - len(str(ochko_draws)) + 1 - len(str(ochko_losses)) - len(str(ochko_wins)) + 1)}{ochko_losses}\n"
+        f" 🎯Процент побед: {ochko_percent_wins}%\n"
+        f" ⭐Серия побед: {ochko_win_streak}\n"
+        " ▸ Сокровища 💰🗝️\n"
+        " Победа ∙ Ничья ∙ Поражение\n"
+        f"{' ' * (6 - len(str(stakanchiki_wins)) + 1)}{stakanchiki_wins}{' ' * (16 - len(str(stakanchiki_wins)) - len(str(stakanchiki_draws)) + 1)}{stakanchiki_draws}{' ' * (19 - len(str(stakanchiki_draws)) + 1 - len(str(stakanchiki_losses)) - len(str(stakanchiki_wins)) + 1)}{stakanchiki_losses}\n"
+        f" 🎯Процент побед: {stakanchiki_percent_wins}%\n"
+        f" ⭐Серия побед: {stakanchiki_win_streak}\n"
+    )
 
     await callback_query.message.edit_media(
         media=InputMediaPhoto(
-            media=cached_photo_path16,  
-            caption=caption,
+            media=cached_photo_path16 if player_design else cached_photo_path25,  
+            caption=caption_premium if player_role == 'premium' else default_caption,
             parse_mode='HTML'
         ),
         reply_markup=extended_static_keyboard
     )
     end_time = time.time()
     print(f"Время срабатывания кнопки Инфо->Подробнее: {end_time - start_time:.2f} секунд")
+
+@player_router.callback_query(lambda c: c.data == "become_premium")
+async def become_premium(callback_query: CallbackQuery):
+    user_id = callback_query.from_user.id
+    await buy_premium_or_check_end_date(user_id=user_id, type_change='update')
+    request_role = await check_user_role(user_id)
+    player_role = [role["role"] for role in request_role][0]
+    print(player_role)
+
+    if player_role == 'player':
+        await buy_premium_or_check_end_date(user_id=user_id, type_change='buy')
+        await shop_bonus_for_premium(user_id=user_id)
+        await change_user_design(user_id=user_id)
+        await callback_query.answer(
+            text="Поздравляем с преобретением премиум подписки!!",
+            show_alert=True
+        )
+    else:
+        diffrequest = await time_difference_premium(user_id=user_id)
+        str_diffrequest = str(diffrequest).split(':')
+        print(diffrequest)
+        await callback_query.answer(
+            text=f"У вас уже есть подписка\n\n Подписка еще действует {int(str_diffrequest[0])} часов {int(str_diffrequest[1])} минут",
+            show_alert=True
+        )
