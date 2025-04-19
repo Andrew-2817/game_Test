@@ -1,7 +1,8 @@
 from aiogram.types import CallbackQuery, Message, InlineKeyboardMarkup, InlineKeyboardButton
+from db_moves.add_db import use_el_in_game
 from hendlers.ls.player import player_router, cached_photo_path5,cached_photo_path20
 from db import get_db_connection
-from db_moves.get_db import check_player_design, check_user_role
+from db_moves.get_db import check_player_design, check_user_el_in_game, check_user_role
 from aiogram import types 
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext 
@@ -17,6 +18,10 @@ cached_photo_path7 = types.FSInputFile(os.path.join("img", "Airbrush-penki2 (2).
 # Словарь для хранения активных таймеров
 active_timers = {}
 
+help_history = []
+help_penalty_text = []
+supershot_plus = 0
+supersave_plus = 0
 
 
 # Функция для сброса таймера для игрока
@@ -170,9 +175,9 @@ async def ls_penki(callback_query: CallbackQuery, state: FSMContext):
     await state.set_state(Penalty.waiting_for_message)
     # Проверка: если боец в игре то не даем ему вызовами кидаться
     # ВОТ ЭТО КОМЕНТИТЬ И СМОЖЕШЬ ИГРАТЬ
-    if any(user_id in (game["attacker"], game["defender"]) for game in ongoing_games.values()):
-        await callback_query.message.answer("Вы уже участвуете в игре! Завершите текущую игру, чтобы начать новую.")
-        return
+    # if any(user_id in (game["attacker"], game["defender"]) for game in ongoing_games.values()):
+    #     await callback_query.message.answer("Вы уже участвуете в игре! Завершите текущую игру, чтобы начать новую.")
+    #     return
 
     await callback_query.message.answer(
         text = "Напишите юзернейм противника:",
@@ -187,13 +192,13 @@ async def ls_penki(callback_query: CallbackQuery, state: FSMContext):
             # Ищем ID пользователя по введённому username
             query = "SELECT user_id FROM users WHERE username = $1"
             opponent_id = await conn.fetchval(query, opponent_username)
-
+            player_design = await check_player_design(opponent_id)
             if opponent_id:
                 # Проверка: если противник уже в игре, не разрешаем начать с ним игру
                 # ТОЖЕ НА КОМЕНТ 
-                if any(opponent_id in (game["attacker"], game["defender"]) for game in ongoing_games.values()):
-                    await message.answer(f"Пользователь @{opponent_username} уже участвует в игре. Попробуйте позже.")
-                    return
+                # if any(opponent_id in (game["attacker"], game["defender"]) for game in ongoing_games.values()):
+                #     await message.answer(f"Пользователь @{opponent_username} уже участвует в игре. Попробуйте позже.")
+                #     return
 
                 # Кнопка "Принять вызов"
                 penalty_accept_keyboard_ls = InlineKeyboardMarkup(inline_keyboard=[
@@ -208,7 +213,7 @@ async def ls_penki(callback_query: CallbackQuery, state: FSMContext):
                 # Отправляем вызов пользователю 
                 await message.bot.send_photo(
                     chat_id=opponent_id,
-                    photo=cached_photo_path5 if not player_role else cached_photo_path20,
+                    photo=cached_photo_path5 if not player_design else cached_photo_path20,
                     caption=f"<b>Игрок @{callback_query.from_user.username}</b> вызывает вас на дуэль в <i>Пенальти!⚽</i>\n\n"
                             "Нажмите <b>Принять вызов</b>, чтобы присоединиться!",
                     parse_mode="HTML",
@@ -231,12 +236,13 @@ ongoing_games = {}
 async def accept_penalty(callback_query: CallbackQuery):
     initiator_id = int(callback_query.data.split(":")[1])
     defender_id = callback_query.from_user.id
-
+    global help_history
+    help_history = []
     # Проверка: если любой из игроков уже в игре, отменяем создание новой игры
     # B ЭТО ТОЖЕ КОМЕНТ
-    if any(initiator_id in (game["attacker"], game["defender"]) or defender_id in (game["attacker"], game["defender"]) for game in ongoing_games.values()):
-        await callback_query.answer("Один из игроков уже участвует в игре! Завершите текущую игру, чтобы начать новую.")
-        return
+    # if any(initiator_id in (game["attacker"], game["defender"]) or defender_id in (game["attacker"], game["defender"]) for game in ongoing_games.values()):
+    #     await callback_query.answer("Один из игроков уже участвует в игре! Завершите текущую игру, чтобы начать новую.")
+    #     return
 
     # Получаем юзернеймы
     initiator_chat = await callback_query.bot.get_chat(initiator_id)
@@ -260,6 +266,7 @@ async def accept_penalty(callback_query: CallbackQuery):
     }
 
     game = ongoing_games[initiator_id]
+    
 
     # Начало игры: отправляем одно сообщение каждому игроку
     attack_message = await callback_query.bot.send_photo(
@@ -291,11 +298,12 @@ async def accept_penalty(callback_query: CallbackQuery):
 async def handle_attack(callback_query: CallbackQuery):
     user_id = callback_query.from_user.id
     game = next((g for g in ongoing_games.values() if g.get("current_attacker") == user_id), None)
-
+    help_penalty_text.clear()
     if not game or game["state"] != "waiting_for_attack":
         await callback_query.answer("Это не ваш ход!")
         return
-
+    global supersave_plus
+    supersave_plus = 0
     # Сброс таймера перед атакой
     await reset_timer(user_id)
 
@@ -308,7 +316,7 @@ async def handle_attack(callback_query: CallbackQuery):
     attack_direction = callback_query.data.split("_")[1]
     game["attack"] = attack_direction
     game["state"] = "waiting_for_defense"
-
+    help_penalty_text.append(game["attack"])
     # Обновляем сообщение атакующего
     await callback_query.bot.edit_message_media(
         chat_id=user_id,
@@ -341,6 +349,8 @@ async def handle_attack(callback_query: CallbackQuery):
 @player_router.callback_query(lambda c: c.data.startswith("defense_"))
 async def handle_defense(callback_query: CallbackQuery):
     user_id = callback_query.from_user.id
+    global supershot_plus
+    global supersave_plus
 
     game = next((g for g in ongoing_games.values() if g.get("current_defender") == user_id), None)
 
@@ -366,10 +376,12 @@ async def handle_defense(callback_query: CallbackQuery):
     if attack_direction == defense_direction:
         result = "Удар отбит! Отличная защита! 🧤"
         game['history'][attacker_id]+='🧤'
+        print('-----------------------', supersave_plus)
+        game["scores"][attacker_id] -= supersave_plus
     else:
         result = "Вы не смогли защититься! ⚽"
         game['history'][attacker_id]+='⚽'
-        game["scores"][attacker_id] += 1
+        game["scores"][attacker_id] += 1+supershot_plus
 
     # Уведомляем игроков о результате
     attacker_message = (
@@ -389,6 +401,7 @@ async def handle_defense(callback_query: CallbackQuery):
     if game["round"] < 6 or (game["round"] < 10 and game["scores"][game["attacker"]] == game["scores"][game["defender"]]):
         # Переключение ролей
         game["round"] += 1
+        supershot_plus = 0
         game["current_attacker"], game["current_defender"] = game["current_defender"], game["current_attacker"]
         game["state"] = "waiting_for_attack"
         game.pop("attack_locked", None)
@@ -448,3 +461,74 @@ async def handle_defense(callback_query: CallbackQuery):
 
         # Удаляем игру
         ongoing_games.pop(game["attacker"], None)
+
+@player_router.callback_query(lambda c: c.data in ["help_in_game_ls","supershot_in_game_ls","supersave_in_game_ls"])
+async def handle_defense_bonus(callback_query: types.CallbackQuery):
+    global help_history
+    user_id = callback_query.from_user.id
+    user_el = await check_user_el_in_game(user_id=user_id)
+    choice = callback_query.data
+    if user_id not in help_history:
+        if choice == "help_in_game_ls":
+            if 'Подсказка' in user_el:
+                shoot_various = ['left', 'center', 'right']
+                for i in shoot_various:
+                    if i != help_penalty_text[0]:
+                        shoot_various.remove(i)
+                        break
+                # shoot_various.remove(help_penalty_text[0])
+                print(choice == "help_in_game", len(shoot_various)!=3)
+                if len(shoot_various)!=3:
+                    await callback_query.answer(
+                        text=f"Игрок пробил в {shoot_various[0]} или {shoot_various[1]}",
+                        show_alert=True
+                    )
+                    await use_el_in_game(user_id = user_id, sale_name='Подсказка')
+                help_history.append(user_id)
+            elif 'Подсказка' not in user_el:
+                await callback_query.answer(
+                        text=f"У вас нет этого бонуса",
+                        show_alert=True
+                    )
+
+        elif choice =="supershot_in_game_ls":
+            if 'Суперудар' in user_el:
+                global supershot_plus
+                print('1=!!!+!+!')
+                if supershot_plus ==0:
+                    supershot_plus+=1
+                else: 
+                    supershot_plus = 1
+                await callback_query.answer(
+                            text=f"Суперудар использован, бейте!",
+                            show_alert=True
+                        )
+                await use_el_in_game(user_id = user_id, sale_name='Суперудар')
+                help_history.append(user_id)
+            elif 'Суперудар' not in user_el:
+                await callback_query.answer(
+                        text=f"У вас нет этого бонуса",
+                        show_alert=True
+                    )
+        elif choice == "supersave_in_game_ls":
+            if 'Суперсейв' in user_el:
+                global supersave_plus
+                supersave_plus = 1
+                print(supersave_plus)
+
+                await callback_query.answer(
+                            text=f"Суперсейв использован, выберите угол!",
+                            show_alert=True
+                        )
+                await use_el_in_game(user_id = user_id, sale_name='Суперсейв')
+                help_history.append(user_id)
+            elif 'Суперсейв' not in user_el:
+                await callback_query.answer(
+                        text=f"У вас нет этого бонуса",
+                        show_alert=True
+                    )
+    else:
+        await callback_query.answer(
+                        text=f"Усиление можно использовать только один раз за игру",
+                        show_alert=True
+                    )

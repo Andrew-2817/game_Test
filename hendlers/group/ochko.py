@@ -96,7 +96,7 @@ async def handle_accept_21(callback_query: types.CallbackQuery):
     # if user_id == author_id:
     #     await callback_query.answer("Вы не можете играть против себя!", show_alert=True)
     #     return
-
+    print('какой нить принт')
     # Инициализация игры
     deck = generate_deck()
     random.shuffle(deck)
@@ -135,10 +135,10 @@ async def handle_accept_21(callback_query: types.CallbackQuery):
     # deck_small = deck_2[:len(deck_2)//2]
     # random.shuffle(deck_small)
     # Запуск таймера
-    await start_turn_timer(game_message.message_id, "player1")
 
     # Проверка на 21 с первого хода 
     if player1_score == 21 or player2_score == 21:
+        print("111")
         winner = author_username if player1_score == 21 else username
         player1_id = active_games[game_message.message_id]["player1"]['id']
         player2_id = active_games[game_message.message_id]["player2"]['id']
@@ -230,6 +230,7 @@ async def handle_accept_21(callback_query: types.CallbackQuery):
         del active_games[game_message.message_id]
         return
 
+    await start_turn_timer(game_message.message_id, "player1")
     await callback_query.answer()
 
 
@@ -291,6 +292,7 @@ async def handle_player_action(callback_query: types.CallbackQuery):
     elif remove_small_values:
         deck_cur = game["deck"]
         deck_2 = sorted(deck_cur, key=lambda x:x[1])
+        print(deck_2)
         deck_small = deck_2[len(deck_2)//2:]
         random.shuffle(deck_small)
         print(deck_small)
@@ -497,6 +499,7 @@ async def handle_player_action(callback_query: types.CallbackQuery):
 
 
 async def start_turn_timer(game_message_id, current_turn_key):
+    print('hey')
     game = active_games.get(game_message_id)
     if not game:
         return
@@ -510,22 +513,25 @@ async def start_turn_timer(game_message_id, current_turn_key):
 
 
 async def timer_logic(game_message_id, current_turn_key):
+    # print('timer')
     try:
         await asyncio.sleep(10)  # Таймер на 10 секунд
     except asyncio.CancelledError:
         return
 
-    # Если игрок не сделал ход за  временя
+    # Если игрок не сделал ход за время
     game = active_games.get(game_message_id)
     if not game or game.get("turn") != (1 if current_turn_key == "player1" else 2):
         return
 
     current_player = game[current_turn_key]
+    print(current_player["stopped"])
     if not current_player.get("stopped", False):
         await handle_stop_action(game_message_id, current_turn_key, is_timeout=True)
 
 
 async def handle_stop_action(game_message_id, current_turn_key, is_timeout=False):
+    print('next')
     game = active_games.get(game_message_id)
     if not game:
         return
@@ -548,6 +554,7 @@ async def handle_stop_action(game_message_id, current_turn_key, is_timeout=False
     # Передача хода следующему игроку
     game["turn"] = 2 if game["turn"] == 1 else 1
     next_player = game["player1"] if game["turn"] == 1 else game["player2"]
+    next_player['stopped'] = False
 
     new_text = (
         f"🎮 Игрок 1 (<b>{game['player1']['username']}</b>) Карты: {', '.join(c[0] for c in game['player1']['cards'])}. Очки: {game['player1']['score']}.\n"
@@ -557,7 +564,7 @@ async def handle_stop_action(game_message_id, current_turn_key, is_timeout=False
     current_markup = group_simbols_for_ocko_att if game["turn"] == 1 else group_simbols_for_ocko_def
     await game["group_message"].edit_media(
         media = types.InputMediaPhoto(
-            media=cached_photo_path4,
+            media=cached_photo_path4 if game["turn"] ==2 else cached_photo_path3,
             caption=new_text,
             parse_mode="HTML"
         ),
@@ -631,7 +638,7 @@ async def finish_game(game_message_id):
         start_time= datetime.now()
     )
     # проверка на налицие победителя
-    if winner["id"] == player1["id"]:
+    if winner and winner["id"] == player1["id"]:
         await update_user_coins(10 if player1_role == 'player' else 20, winner["id"])
         # обновляем статистику каждому игроку
         await update_user_statistics(
@@ -660,7 +667,7 @@ async def finish_game(game_message_id):
             choice_3=0,
             match_points=0 if await get_player_match_points(user_id=losser["id"], game_id=3) < 10 else -10
         )
-    elif winner["id"] == player2["id"]:
+    elif winner and winner["id"] == player2["id"]:
         await update_user_coins(10 if player2_role == 'player' else 20, winner["id"])
         # обновляем статистику каждому игроку
         await update_user_statistics(
@@ -730,31 +737,31 @@ async def handle_defense_bonus(callback_query: types.CallbackQuery):
     choice = callback_query.data
     if user_id not in help_history:
         if choice =="ochko_remove_big_values":
-            if 'Суперудар' in user_el:
+            if 'Страховка' in user_el:
                 print('1=!!!+!+!')
                 remove_big_values = True
                 await callback_query.answer(
-                            text=f"Суперудар использован, бейте!",
+                            text=f"Страховка использована, ходите!",
                             show_alert=True
                         )
-                await use_el_in_game(user_id = user_id, sale_name='Суперудар')
+                await use_el_in_game(user_id = user_id, sale_name='Страховка')
                 help_history.append(user_id)
-            elif 'Суперудар' not in user_el:
+            elif 'Страховка' not in user_el:
                 await callback_query.answer(
                         text=f"У вас нет этого бонуса",
                         show_alert=True
                     )
         elif choice =="ochko_remove_small_values":
-            if 'Суперсейв' in user_el:
+            if 'Азарт' in user_el:
                 print('1=!!!+!+!')
                 remove_small_values = True
                 await callback_query.answer(
-                            text=f"Суперсейв использован, бейте!",
+                            text=f"Азарт использован, бейте!",
                             show_alert=True
                         )
-                await use_el_in_game(user_id = user_id, sale_name='Суперсейв')
+                await use_el_in_game(user_id = user_id, sale_name='Азарт')
                 help_history.append(user_id)
-            elif 'Суперудар' not in user_el:
+            elif 'Азарт' not in user_el:
                 await callback_query.answer(
                         text=f"У вас нет этого бонуса",
                         show_alert=True

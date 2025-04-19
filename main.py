@@ -10,6 +10,7 @@ from hendlers.ls.penalty_ls import player_router
 from hendlers.ls.treasure_ls import player_router
 from hendlers.ls.KMN_ls import player_router
 from hendlers.ls.profile import player_router
+from hendlers.ls.ochko_ls import player_router
 from hendlers.ls.magaz import player_router
 from hendlers.group.ochko import ochko_router
 from hendlers.ls.ranks import player_router

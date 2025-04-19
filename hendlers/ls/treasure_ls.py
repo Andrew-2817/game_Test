@@ -1,7 +1,8 @@
 from aiogram.types import CallbackQuery, Message, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext 
-from db_moves.get_db import check_player_design, check_user_role
+from db_moves.get_db import check_player_design, check_user_el_in_game, check_user_role
+from db_moves.add_db import use_el_in_game
 from hendlers.ls.player import player_router, cached_photo_path8, cached_photo_path23
 from aiogram.filters import Command
 from db import get_db_connection
@@ -19,7 +20,11 @@ cached_photo_path7 = types.FSInputFile(os.path.join("img", "chest2.jpg"))
 # Словарь для хранения активных таймеров
 active_timers = {}
 
-
+you_can = False
+help_history = []
+help_penalty_text = []
+supershot_plus = 0
+supersave_plus = 0
 
 # Функция для сброса таймера для игрока
 async def reset_timer(player_id):
@@ -195,6 +200,7 @@ async def ls_treasures(callback_query: CallbackQuery, state: FSMContext):
             # Ищем ID пользователя по введённому username
             query = "SELECT user_id FROM users WHERE username = $1"
             opponent_id = await conn.fetchval(query, opponent_username)
+            player_design = await check_player_design(opponent_id)
 
             if opponent_id:
                 # Проверка: если противник уже в игре, не разрешаем начать с ним игру
@@ -216,7 +222,7 @@ async def ls_treasures(callback_query: CallbackQuery, state: FSMContext):
                 # Отправляем вызов пользователю 
                 await message.bot.send_photo(
                     chat_id=opponent_id,
-                    photo=cached_photo_path5 if not player_role else cached_photo_path23,
+                    photo=cached_photo_path5 if not player_design else cached_photo_path23,
                     caption=f"<b>Игрок @{callback_query.from_user.username}</b> вызывает вас на дуэль в <i>Сокровища 💰🗝️!</i>\n\n"
                             "Нажмите <b>Принять вызов</b>, чтобы присоединиться!",
                     parse_mode="HTML",
@@ -244,7 +250,8 @@ async def accept_treasures(callback_query: CallbackQuery):
     if any(initiator_id in (game["attacker"], game["defender"]) or defender_id in (game["attacker"], game["defender"]) for game in ongoing_games.values()):
         await callback_query.answer("Один из игроков уже участвует в игре! Завершите текущую игру, чтобы начать новую.")
         return
-
+    global help_history
+    help_history = []
     # Получаем юзернеймы
     initiator_chat = await callback_query.bot.get_chat(initiator_id)
     initiator_username = initiator_chat.username or f"Игрок {initiator_id}"
@@ -298,7 +305,8 @@ async def accept_treasures(callback_query: CallbackQuery):
 async def handle_attack(callback_query: CallbackQuery):
     user_id = callback_query.from_user.id
     game = next((g for g in ongoing_games.values() if g.get("current_attacker") == user_id), None)
-
+    help_penalty_text.clear()
+    
     if not game or game["state"] != "waiting_for_attack":
         print('okkkkkkkkkkkkkkkkkk')
         await callback_query.answer("Это не ваш ход!")
@@ -316,6 +324,10 @@ async def handle_attack(callback_query: CallbackQuery):
     attack_direction = callback_query.data.split("_")[1]
     game["attack"] = attack_direction
     game["state"] = "waiting_for_defense"
+
+    global you_can
+    you_can = True
+    help_penalty_text.append(game["attack"])
 
     # Обновляем сообщение атакующего
     await callback_query.bot.edit_message_media(
@@ -349,7 +361,8 @@ async def handle_attack(callback_query: CallbackQuery):
 @player_router.callback_query(lambda c: c.data.startswith("treasuresD_"))
 async def handle_defense(callback_query: CallbackQuery):
     user_id = callback_query.from_user.id
-
+    global supershot_plus
+    global supersave_plus
     game = next((g for g in ongoing_games.values() if g.get("current_defender") == user_id), None)
 
     if not game or game["state"] != "waiting_for_defense":
@@ -369,14 +382,17 @@ async def handle_defense(callback_query: CallbackQuery):
     attack_direction = game["attack"]
     attacker_id = game["current_attacker"]
     defender_id = game["current_defender"]
+    global you_can
+    you_can = False
     # Определяем результат удара
     if attack_direction == defense_direction:
         result = "Вы угадали! Отличная работа! 💰"
-        game["scores"][defender_id] += 1
+        game["scores"][defender_id] += 1+supershot_plus
         game['history'][defender_id]+='💰'
     else:
         result = "Вы не угадали! 🔒"
         game['history'][defender_id]+='🔒'
+        game["scores"][attacker_id] += supersave_plus
 
     # Уведомляем игроков о результате
     attacker_message = (
@@ -396,6 +412,8 @@ async def handle_defense(callback_query: CallbackQuery):
     if game["round"] < 6 or (game["round"] < 10 and game["scores"][game["attacker"]] == game["scores"][game["defender"]]):
         # Переключение ролей
         game["round"] += 1
+        supershot_plus = 0
+        supersave_plus = 0
         game["current_attacker"], game["current_defender"] = game["current_defender"], game["current_attacker"]
         game["state"] = "waiting_for_attack"
         game.pop("attack_locked", None)
@@ -454,3 +472,75 @@ async def handle_defense(callback_query: CallbackQuery):
             )
         # Удаляем игру
         ongoing_games.pop(game["attacker"], None)
+
+
+@player_router.callback_query(lambda c: c.data in ["help_in_treasure_ls","supershot_in_treasure_ls","supersave_in_treasure_ls"])
+async def handle_defense_act(callback_query: types.CallbackQuery):
+    global help_history
+    user_id = callback_query.from_user.id
+    user_el = await check_user_el_in_game(user_id=user_id)
+    choice = callback_query.data
+    if user_id not in help_history:
+        if choice == "help_in_treasure_ls":
+            if 'Подсказка' in user_el:
+                shoot_various = ['left', 'center', 'right']
+                print(help_penalty_text[0] in shoot_various)
+                for i in shoot_various:
+                    if i != help_penalty_text[0]:
+                        shoot_various.remove(i)
+                        break
+                # shoot_various.remove(help_penalty_text[0])
+                print(choice == "help_in_game", len(shoot_various)!=3)
+                if len(shoot_various)!=3:
+                    await callback_query.answer(
+                        text=f"Игрок пробил в {shoot_various[0]} или {shoot_various[1]}",
+                        show_alert=True
+                    )
+                    await use_el_in_game(user_id = user_id, sale_name='Подсказка')
+                help_history.append(user_id)
+            elif 'Подсказка' not in user_el:
+                await callback_query.answer(
+                        text=f"У вас нет этого бонуса",
+                        show_alert=True
+                    )
+
+        elif choice =="supershot_in_treasure_ls":
+            if 'Суперудар' in user_el:
+                global supershot_plus
+                print('1=!!!+!+!')
+                if supershot_plus ==0:
+                    supershot_plus+=1
+                else: 
+                    supershot_plus = 1
+                await callback_query.answer(
+                            text=f"Супернаходка использована, выбирайте!",
+                            show_alert=True
+                        )
+                await use_el_in_game(user_id = user_id, sale_name='Суперудар')
+                help_history.append(user_id)
+            elif 'Суперудар' not in user_el:
+                await callback_query.answer(
+                        text=f"У вас нет этого бонуса",
+                        show_alert=True
+                    )
+        elif choice == "supersave_in_treasure_ls":
+            if 'Суперсейв' in user_el:
+                global supersave_plus
+                print("23e232323")
+                supersave_plus += 1
+                await callback_query.answer(
+                            text=f"Суперпрятка использована, выберите сундук!",
+                            show_alert=True
+                        )
+                await use_el_in_game(user_id = user_id, sale_name='Суперсейв')
+                help_history.append(user_id)
+            elif 'Суперсейв' not in user_el:
+                await callback_query.answer(
+                        text=f"У вас нет этого бонуса",
+                        show_alert=True
+                    )
+    else:
+        await callback_query.answer(
+                        text=f"Усиление можно использовать только один раз за игру",
+                        show_alert=True
+                    )

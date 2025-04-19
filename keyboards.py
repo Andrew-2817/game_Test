@@ -64,8 +64,20 @@ profile_keyboard = InlineKeyboardMarkup(inline_keyboard=[[profile_statistic],[hi
 # ПАК ИЗ КНОПОК РАСШИРЕННАЯ СТАТИСТИКА
 #кнопка "Назад"
 extended_static = InlineKeyboardButton(text="Назад 🔙", callback_data="start_profile")
+extended_static_remove_loss = InlineKeyboardButton(text="Отменить поражение ⛔", callback_data="remove_loss")
+extended_static_keyboard = InlineKeyboardMarkup(inline_keyboard=[[extended_static_remove_loss],[extended_static]])
 
-extended_static_keyboard = InlineKeyboardMarkup(inline_keyboard=[[extended_static]])
+# ПАК КНОПОК ОТМЕНИТЬ ПОРАЖЕНИЕ И ВЫБРАТЬ ИГРУ ГДЕ ОТМЕНА
+
+remove_loss_back = InlineKeyboardButton(text="Назад 🔙", callback_data="extended_static") 
+#кнопка "Пенальти"
+remove_loss_penality  = InlineKeyboardButton(text="Пенальти ⚽", callback_data="remove_loss_penality")
+#кнопка "Цуефа"
+remove_loss_RPS = InlineKeyboardButton(text="Цуефа 🪨✂️📃", callback_data="remove_loss_RPS")
+remove_loss_21 = InlineKeyboardButton(text="21 ♠️♥️", callback_data="remove_loss_21")
+remove_loss_treasures = InlineKeyboardButton(text="Сокровища 💰🗝️", callback_data="remove_loss_treasures")
+remove_loss_keyboard = InlineKeyboardMarkup(inline_keyboard=[[remove_loss_RPS, remove_loss_penality], [remove_loss_treasures, remove_loss_21], [remove_loss_back]])
+
 
 #ПАК ИЗ КНОПОК ДЛЯ "ИГРАТЬ"(кнопка)
 #кнопка "Назад"
@@ -91,8 +103,11 @@ super_shoot = InlineKeyboardButton(text="Суперудар ⚽(Супернах
 super_save  = InlineKeyboardButton(text="Суперсейв 🧤(Суперпрятка 🔎)", callback_data="super_save")
 new_desigh = InlineKeyboardButton(text="Эксклюзивный дизайн 🎨", callback_data="new_desigh")
 ticket_private_tour = InlineKeyboardButton(text="Билет на частный турнир 🎟️", callback_data="ticket_private_tour")
+gamble_bonus = InlineKeyboardButton(text="Азарт 🎰", callback_data="gamble_bonus")
+insurance_bonus = InlineKeyboardButton(text="Страховка 🛡️", callback_data="insurance_bonus")
 shop_back = InlineKeyboardButton(text="Назад 🔙", callback_data="start")
-shop_keyboard = InlineKeyboardMarkup(inline_keyboard=[[ticket_private_tour], [remove_loss], [super_shoot], [new_desigh], [help_cuefa], [super_save], [shop_back]])
+shop_keyboard = InlineKeyboardMarkup(inline_keyboard=[[new_desigh],[gamble_bonus],[ticket_private_tour], [help_cuefa],[super_save], [remove_loss],[super_shoot],[insurance_bonus], [shop_back]])
+
 test_button = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='Начать', callback_data='test_state')]])
 buy_button = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='Начать', callback_data='buy_state')]])
 # ПАК ИЗ КНОПОК ДЛЯ "ИСТОРИЯ МАТЧЕЙ"
@@ -183,15 +198,18 @@ ochko_accept_keyboard = InlineKeyboardMarkup(inline_keyboard=[[ochko_accept_butt
 attack_left = InlineKeyboardButton(text="⬅️", callback_data="attack_left")
 attack_center = InlineKeyboardButton(text="⬆️", callback_data="attack_center")
 attack_right = InlineKeyboardButton(text="➡️", callback_data="attack_right")
+supershot_in_game_ls = InlineKeyboardButton(text="Суперудар ⚽", callback_data="supershot_in_game_ls")
 attack_buttons_penki_ls = InlineKeyboardMarkup(inline_keyboard=[
-    [attack_left, attack_center, attack_right]
+    [attack_left, attack_center, attack_right], [supershot_in_game_ls]
 ])
 # Кнопки для защитника
 defense_left = InlineKeyboardButton(text="⬅️", callback_data="defense_left")
 defense_center = InlineKeyboardButton(text="⬆️", callback_data="defense_center")
 defense_right = InlineKeyboardButton(text="➡️", callback_data="defense_right")
+supersave_in_game_ls = InlineKeyboardButton(text="Суперсейв 🧤", callback_data="supersave_in_game_ls")
+help_in_game_ls = InlineKeyboardButton(text="Подсказка 💡", callback_data="help_in_game_ls")
 defense_buttons_penki_ls = InlineKeyboardMarkup(inline_keyboard=[
-    [defense_left, defense_center, defense_right]
+    [defense_left, defense_center, defense_right], [supersave_in_game_ls], [help_in_game_ls]
 ])
 
 
@@ -200,15 +218,18 @@ defense_buttons_penki_ls = InlineKeyboardMarkup(inline_keyboard=[
 attack_left_treasures = InlineKeyboardButton(text="💰", callback_data="treasuresA_left")
 attack_center_treasures = InlineKeyboardButton(text="💰", callback_data="treasuresA_center")
 attack_right_treasures = InlineKeyboardButton(text="💰", callback_data="treasuresA_right")
+supersave_in_treasure_ls = InlineKeyboardButton(text="Суперпрятка 🔎", callback_data="supersave_in_treasure_ls")
 attack_buttons_treasures_ls = InlineKeyboardMarkup(inline_keyboard=[
-    [attack_left_treasures, attack_center_treasures, attack_right_treasures]
+    [attack_left_treasures, attack_center_treasures, attack_right_treasures], [supersave_in_treasure_ls]
 ])
 # Кнопки для защитника
 defense_left_treasures = InlineKeyboardButton(text="🗝️", callback_data="treasuresD_left")
 defense_center_treasures = InlineKeyboardButton(text="🗝️", callback_data="treasuresD_center")
 defense_right_treasures = InlineKeyboardButton(text="🗝️", callback_data="treasuresD_right")
+supershot_in_treasure_ls = InlineKeyboardButton(text="Супернаходка 💰", callback_data="supershot_in_treasure_ls")
+help_in_treasure_ls = InlineKeyboardButton(text="Подсказка 💡", callback_data="help_in_treasure_ls")
 defense_buttons_treasures_ls = InlineKeyboardMarkup(inline_keyboard=[
-    [defense_left_treasures, defense_center_treasures, defense_right_treasures]
+    [defense_left_treasures, defense_center_treasures, defense_right_treasures], [supershot_in_treasure_ls], [help_in_treasure_ls]
 ])
 
 
@@ -217,15 +238,17 @@ defense_buttons_treasures_ls = InlineKeyboardMarkup(inline_keyboard=[
 attack_left_KMN = InlineKeyboardButton(text="🪨", callback_data="KMNA_kamen")
 attack_center_KMN = InlineKeyboardButton(text="📃", callback_data="KMNA_bumaga")
 attack_right_KMN = InlineKeyboardButton(text="✂️", callback_data="KMNA_nognichi")
+supershot_in_kmn_ls = InlineKeyboardButton(text="Суперудар ⚽", callback_data="supershot_in_kmn_ls")
 attack_buttons_KMN_ls = InlineKeyboardMarkup(inline_keyboard=[
-    [attack_left_KMN, attack_center_KMN, attack_right_KMN]
+    [attack_left_KMN, attack_center_KMN, attack_right_KMN], [supershot_in_kmn_ls]
 ])
 # Кнопки для защитника
 defense_left_KMN = InlineKeyboardButton(text="🪨", callback_data="KMND_kamen")
 defense_center_KMN = InlineKeyboardButton(text="📃", callback_data="KMND_bumaga")
 defense_right_KMN = InlineKeyboardButton(text="✂️", callback_data="KMND_nognichi")
+supershot_in_kmn_ls = InlineKeyboardButton(text="Суперудар ⚽", callback_data="supershot_in_kmn_ls")
 defense_buttons_KMN_ls = InlineKeyboardMarkup(inline_keyboard=[
-    [defense_left_KMN, defense_center_KMN, defense_right_KMN]
+    [defense_left_KMN, defense_center_KMN, defense_right_KMN], [supershot_in_kmn_ls]
 ]) 
 
 
@@ -282,6 +305,25 @@ group_simbols_for_ocko_def = InlineKeyboardMarkup(
         [InlineKeyboardButton(text="⛔ Остановиться", callback_data="ochko_stop_second")],
         [InlineKeyboardButton(text="Взять меньшую половину колоды", callback_data="ochko_remove_big_values")],
         [InlineKeyboardButton(text="Взять большую половину колоды", callback_data="ochko_remove_small_values")],
+    ]
+)
+
+ls_simbols_for_ocko_att = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton(text="➕ Взять карту", callback_data="ochko_go_ferst_ls")],
+        [InlineKeyboardButton(text="⛔ Остановиться", callback_data="ochko_stop_ferst_ls")],
+        [InlineKeyboardButton(text="Взять меньшую половину колоды", callback_data="ochko_remove_big_values_ls")],
+        [InlineKeyboardButton(text="Взять большую половину колоды", callback_data="ochko_remove_small_values_ls")],
+    ]
+)
+ 
+# Кнопки для второго игрока
+ls_simbols_for_ocko_def = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton(text="➕ Взять карту", callback_data="ochko_go_second_ls")],
+        [InlineKeyboardButton(text="⛔ Остановиться", callback_data="ochko_stop_second_ls")],
+        [InlineKeyboardButton(text="Взять меньшую половину колоды", callback_data="ochko_remove_big_values_ls")],
+        [InlineKeyboardButton(text="Взять большую половину колоды", callback_data="ochko_remove_small_values_ls")],
     ]
 )
 

@@ -162,7 +162,7 @@ async def check_user_el_in_game(user_id:int):
         player = await conn.fetch("""
             SELECT sale_name
             FROM shop
-            where user_id = $1 and (sale_name = 'Подсказка' or sale_name = 'Суперудар' or sale_name = 'Суперсейв') and user_count >0
+            where user_id = $1 and (sale_name = 'Подсказка' or sale_name = 'Суперудар' or sale_name = 'Суперсейв' or sale_name = 'Азарт' or sale_name = 'Страховка' or sale_name = 'Отмена поражения') and user_count >0
         """, user_id)
     finally:
         await conn.close()

@@ -1,11 +1,11 @@
 from datetime import datetime
 from aiogram import types
 import os
-from hendlers.ls.player  import player_router, bot, man, cached_photo_path17, cached_photo_path5, cached_photo_path3, cached_photo_path15, cached_photo_path16, cached_photo_path20, cached_photo_path21, cached_photo_path22, cached_photo_path23, cached_photo_path25
+from hendlers.ls.player  import player_router, bot, man, cached_photo_path17, cached_photo_path5, cached_photo_path3, cached_photo_path15, cached_photo_path16, cached_photo_path20, cached_photo_path21, cached_photo_path22, cached_photo_path23, cached_photo_path25, cached_photo_path27
 from aiogram.types import CallbackQuery, InputMediaPhoto, UserProfilePhotos
-from db_moves.add_db import  change_user_design, update_days_for_user, buy_premium_or_check_end_date, shop_bonus_for_premium
-from db_moves.get_db import  check_player_design, check_user_role, display_main_statistics, display_total_days, time_difference_premium
-from keyboards import profile_keyboard, history_of_matches_keyboard, history_of_matches_back_keyboard, extended_static_keyboard
+from db_moves.add_db import  change_user_design, remove_loss_in_game, update_days_for_user, buy_premium_or_check_end_date, shop_bonus_for_premium, update_user_statistics
+from db_moves.get_db import  check_player_design, check_user_el_in_game, check_user_role, display_main_statistics, display_total_days, time_difference_premium
+from keyboards import profile_keyboard, history_of_matches_keyboard, history_of_matches_back_keyboard, extended_static_keyboard, remove_loss_keyboard
 from db import get_db_connection
 import time
 
@@ -453,6 +453,46 @@ async def bot_info_tournaments(callback_query: CallbackQuery):
     )
     end_time = time.time()
     print(f"Время срабатывания кнопки Инфо->Подробнее: {end_time - start_time:.2f} секунд")
+
+@player_router.callback_query(lambda c: c.data == "remove_loss")
+async def remove_loss(callback_query: CallbackQuery):
+    user_id = callback_query.from_user.id
+    await callback_query.message.edit_media(
+        media=InputMediaPhoto(
+            media=cached_photo_path27,  
+            caption="Выберите в какой игре отменить поражение",
+            parse_mode='HTML'
+        ),
+        reply_markup=remove_loss_keyboard
+    )
+@player_router.callback_query(lambda c: c.data in ["remove_loss_penality","remove_loss_RPS", "remove_loss_21", "remove_loss_treasures"])
+async def remove_loss(callback_query: CallbackQuery):
+    user_id = callback_query.from_user.id
+    user_bonuses = await check_user_el_in_game(user_id = user_id)
+    game_name = callback_query.data
+    if "Отмена поражения" not in user_bonuses:
+         await callback_query.answer("У вас нет этого бонуса")
+    else:
+        if game_name == 'remove_loss_RPS':
+            await remove_loss_in_game(user_id=user_id, game_id=1)
+            await callback_query.answer("Бонус успешно применен")
+        elif game_name == 'remove_loss_penality':
+            await remove_loss_in_game(user_id=user_id, game_id=2)
+            await callback_query.answer("Бонус успешно применен")
+        elif game_name == 'remove_loss_treasures':
+            await remove_loss_in_game(user_id=user_id, game_id=4)
+            await callback_query.answer("Бонус успешно применен")
+        elif game_name == 'remove_loss_penality_21':
+            await remove_loss_in_game(user_id=user_id, game_id=3)
+            await callback_query.answer("Бонус успешно применен")
+    # await callback_query.message.edit_media(
+    #     media=InputMediaPhoto(
+    #         media=cached_photo_path25,  
+    #         caption="Выберите в какой игре отменить поражение",
+    #         parse_mode='HTML'
+    #     ),
+    #     reply_markup=remove_loss_keyboard
+    # )
 
 @player_router.callback_query(lambda c: c.data == "become_premium")
 async def become_premium(callback_query: CallbackQuery):

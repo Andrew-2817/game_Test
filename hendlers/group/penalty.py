@@ -599,7 +599,7 @@ async def handle_defense_bonus(callback_query: types.CallbackQuery):
         elif choice == "supersave_in_game":
             if 'Суперсейв' in user_el:
                 global supersave_plus
-                print("23e232323")
+                print("puuuuuuppppupuuuuuuuuuuuuu")
                 if supersave_plus ==0:
                     supersave_plus+=1
                 else: 

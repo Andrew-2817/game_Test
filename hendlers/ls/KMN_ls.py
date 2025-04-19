@@ -1,5 +1,7 @@
+from datetime import datetime
 from aiogram.types import CallbackQuery, Message, InlineKeyboardMarkup, InlineKeyboardButton
-from db_moves.get_db import check_player_design, check_user_role
+from db_moves.get_db import check_player_design, check_user_el_in_game, check_user_role, get_player_best_win_streak, get_player_match_points, get_player_win_streak
+from db_moves.add_db import add_matches, add_shop, init_player_statistics, update_user_statistics, use_el_in_game
 from hendlers.ls.player import player_router, cached_photo_path5, cached_photo_path21
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext 
@@ -8,6 +10,9 @@ from aiogram import types
 import os 
 from keyboards import attack_buttons_KMN_ls, defense_buttons_KMN_ls, game_ls_back_keyboard
 import asyncio
+
+help_history = []
+supershot = {}
 
 cached_photo_path3 = types.FSInputFile(os.path.join("img", "КМН.jpg"))
 cached_photo_path5 = types.FSInputFile(os.path.join("img", "tours2.jpg"))
@@ -36,7 +41,7 @@ async def reset_timer(player_id):
 
 async def start_turn_timer(game, callback_query, player_id, timeout=15):
     await reset_timer(player_id)
-
+    global supershot
     async def countdown():
         for remaining in range(timeout, 0, -1):
             print(f"Оставшееся время для игрока {player_id}: {remaining} секунд")
@@ -68,7 +73,7 @@ async def start_turn_timer(game, callback_query, player_id, timeout=15):
                 game['history'][game["current_defender"]]+='❌'
                 print(game["history"][game['current_attacker']][-1])
                 if game["history"][game['current_attacker']][-1] != '❌': 
-                    game["scores"][game["current_attacker"]] += 1
+                    game["scores"][game["current_attacker"]] += 1+supershot[game["current_attacker"]]
                 # Завершаем раунд
                 await end_round(game, callback_query)
 
@@ -87,6 +92,7 @@ async def start_turn_timer(game, callback_query, player_id, timeout=15):
 
 # Функция для завершения раунда и перехода к следующему
 async def end_round(game, callback_query):
+    global supershot
     if game["round"] < 10 or (game["round"] < 16 and game["scores"][game["attacker"]] == game["scores"][game["defender"]]):
         # Переход к следующему раунду
         # game["round"] += 1
@@ -121,6 +127,7 @@ async def end_round(game, callback_query):
             )
             game['round']+=1
             # Запускаем таймер для защитника
+            # supershot_plus = 0
             await start_turn_timer(game, callback_query, game["current_defender"])
         else:  
 
@@ -162,6 +169,10 @@ async def end_round(game, callback_query):
             game["messages"][game["current_defender"]] = defender_wait_message.message_id
 
             # Запускаем таймер для атакующего
+            supershot = {
+                game["current_attacker"]: 0,
+                game["current_defender"]: 0
+            }
             await start_turn_timer(game, callback_query, next_attacker_id)
     elif (game["round"] >= 10 and game["scores"][game["attacker"]] != game["scores"][game["defender"]]) and game['round']<16 or (game["round"] == 16 and game["scores"][game["attacker"]] == game["scores"][game["defender"]]):
         print("01111111111111111111111111111111111111111111111111111111111111111111111")
@@ -191,6 +202,7 @@ async def end_round(game, callback_query):
             )
 
         # Удаляем игру
+        # supershot_plus = 0
         ongoing_games.pop(game["attacker"], None)
 
         
@@ -218,13 +230,15 @@ async def ls_penki(callback_query: CallbackQuery, state: FSMContext):
         )
 
     @player_router.message(KMN.waiting_for_message)
-    async def check_username(message: Message):
+    async def check_username(message: Message, state: FSMContext):
         opponent_username = message.text.strip("@")
         conn = await get_db_connection()
         try:
             # Ищем ID пользователя по введённому username
             query = "SELECT user_id FROM users WHERE username = $1"
             opponent_id = await conn.fetchval(query, opponent_username)
+
+            player_design = await check_player_design(opponent_id)
 
             if opponent_id:
                 # Проверка: если противник уже в игре, не разрешаем начать с ним игру
@@ -246,7 +260,7 @@ async def ls_penki(callback_query: CallbackQuery, state: FSMContext):
                 # Отправляем вызов пользователю 
                 await message.bot.send_photo(
                     chat_id=opponent_id,
-                    photo=cached_photo_path3 if not player_role else cached_photo_path21,
+                    photo=cached_photo_path3 if not player_design else cached_photo_path21,
                     caption=f"<b>Игрок @{callback_query.from_user.username}</b> вызывает вас на дуэль в <i>Цуефа!🪨✂️📃</i>\n\n"
                             "Нажмите <b>Принять вызов</b>, чтобы присоединиться!",
                     parse_mode="HTML",
@@ -269,7 +283,19 @@ ongoing_games = {}
 async def accept_penalty(callback_query: CallbackQuery):
     initiator_id = int(callback_query.data.split(":")[1])
     defender_id = callback_query.from_user.id
+    global supershot
+    supershot = {
+        initiator_id:0,
+        defender_id:0
+    }
+    await add_shop(user_id = initiator_id)
+    await add_shop(user_id = defender_id)
 
+    # Иницивлизация статистики пользователя если не запустил бота
+    await init_player_statistics(initiator_id)
+    # Иницивлизация статистики пользователя если не запустил бота
+    await init_player_statistics(defender_id)
+    
     # Проверка: если любой из игроков уже в игре, отменяем создание новой игры
     # B ЭТО ТОЖЕ КОМЕНТ
     if any(initiator_id in (game["attacker"], game["defender"]) or defender_id in (game["attacker"], game["defender"]) for game in ongoing_games.values()):
@@ -300,6 +326,8 @@ async def accept_penalty(callback_query: CallbackQuery):
     game = ongoing_games[initiator_id]
     print(game)
     # Начало игры: отправляем одно сообщение каждому игроку
+    if "start_time" not in game:
+        game["start_time"] = datetime.now()
     attack_message = await callback_query.bot.send_photo(
         chat_id=initiator_id,
         photo=cached_photo_path6,
@@ -329,6 +357,7 @@ async def accept_penalty(callback_query: CallbackQuery):
 async def handle_attack(callback_query: CallbackQuery):
     user_id = callback_query.from_user.id
     game = next((g for g in ongoing_games.values() if g.get("current_attacker") == user_id), None)
+    print(game["history"])
     print(ongoing_games.values())
     if not game or game["state"] != "waiting_for_attack":
         await callback_query.answer("Это не ваш ход!")
@@ -380,6 +409,7 @@ async def handle_attack(callback_query: CallbackQuery):
 @player_router.callback_query(lambda c: c.data.startswith("KMND_"))
 async def handle_defense(callback_query: CallbackQuery):
     user_id = callback_query.from_user.id
+    global supershot
 
     game = next((g for g in ongoing_games.values() if g.get("current_defender") == user_id), None)
 
@@ -409,10 +439,13 @@ async def handle_defense(callback_query: CallbackQuery):
     # else:
     #     result = "Вы не смогли защититься! ⚽"
     #     game["scores"][attacker_id] += 1
+    supershot_att = supershot[attacker_id] if supershot[attacker_id] else 0
+    supershot_def = supershot[defender_id] if supershot[defender_id] else 0
+
     if choices[attack_direction][defense_direction]=='победил':
-        game["scores"][attacker_id] +=1
+        game["scores"][attacker_id] +=1+supershot_att
     if choices[defense_direction][attack_direction]=='победил' or game["history"][attacker_id][-1] =='❌':
-        game["scores"][defender_id] +=1
+        game["scores"][defender_id] +=1+supershot_def
 
     # Уведомляем игроков о результате
     attacker_message = (
@@ -459,7 +492,10 @@ async def handle_defense(callback_query: CallbackQuery):
             caption="Ожидайте, пока противник сделает ход 🪨✂️📃\n",
         )
         game["messages"][game["current_defender"]] = defender_wait_message.message_id
-
+        supershot = {
+            attacker_id:0,
+            defender_id:0
+        }
         # Запускаем таймер для атакующего
         await start_turn_timer(game, callback_query, next_attacker_id)
     else:
@@ -490,4 +526,35 @@ async def handle_defense(callback_query: CallbackQuery):
             )
 
         # Удаляем игру
+        supershot_plus = 0
         ongoing_games.pop(game["attacker"], None)
+
+
+@player_router.callback_query(lambda c: c.data in ["supershot_in_kmn_ls"])
+async def handle_defense_kmn(callback_query: types.CallbackQuery):
+    global help_history
+    user_id = callback_query.from_user.id
+    user_el = await check_user_el_in_game(user_id=user_id)
+    choice = callback_query.data
+    if user_id not in help_history:
+        if choice =="supershot_in_kmn_ls":
+            if 'Суперудар' in user_el:
+                global supershot
+                supershot[user_id] = 1
+    
+                await callback_query.answer(
+                            text=f"Суперудар использован, бейте!",
+                            show_alert=True
+                        )
+                await use_el_in_game(user_id = user_id, sale_name='Суперудар')
+                help_history.append(user_id)
+            elif 'Суперудар' not in user_el:
+                await callback_query.answer(
+                        text=f"У вас нет этого бонуса",
+                        show_alert=True
+                    )
+    else:
+        await callback_query.answer(
+                        text=f"Усиление можно использовать только один раз за игру",
+                        show_alert=True
+                    )

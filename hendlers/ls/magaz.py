@@ -15,11 +15,23 @@ async def bot_shop(callback_query: CallbackQuery):
     user_coins = await get_user_coins(user_id)
     result = [[record["user_id"], record["sale_name"], record["sale_cost"], record["sale_count"], record["user_count"]] for record in player_el_shop]
     result_name=[
-        f"{result[0][1]}🎨",f"{result[1][1]}🎟️",f"{result[2][1]}⛔", f"{result[3][1]}💡",f"{result[4][1]}🧤(Суперпрятка 🔎)",f"{result[5][1]}⚽(Супернаходка 💰)"
+        f"{result[0][1]}🎨",f"{result[1][1]}🎰",f"{result[2][1]}🎟️", f"{result[3][1]}💡",f"{result[4][1]}🧤(Суперпрятка 🔎)",f"{result[5][1]}⛔", f"{result[6][1]}⚽(Супернаходка 💰)", f"{result[7][1]}🛡️"
+    ]
+    use_caption = [
+        f"<b>Доступно в:</b> Цуефа🪨✂️📃, Пенальти⚽, Сокровища💰🗝️\n",
+        f"<b>Доступно в:</b> 21♠️♥️\n",
+        f"<b>Доступно в:</b> Пенальти⚽, Сокровища💰🗝️\n",
     ]
     output_caption = f""
-    for i in range(len(result)):
-        local_caption = f"<b>{result_name[i]}\n Стоимость:{result[i][2]}💲</b>\n Количество: {result[i][3]}    У вас:{result[i][4]}\n\n"
+    for i in range(len(result_name)):
+        use_area = ""
+        if i in [3, 4]:
+            use_area = use_caption[2]
+        elif i in [6]:
+            use_area = use_caption[0]
+        elif i in [1, 7]:
+            use_area = use_caption[1]
+        local_caption = f"{result_name[i]}\n{use_area}<b>Стоимость: </b>{result[i][2]}💲\n<b>Количество: </b>{result[i][3]}    <b>У вас: </b>{result[i][4]}\n\n"
         output_caption+=local_caption
     await callback_query.message.edit_media(
         media=InputMediaPhoto(
@@ -33,7 +45,7 @@ async def bot_shop(callback_query: CallbackQuery):
         reply_markup=shop_keyboard
     )
 
-@player_router.callback_query(lambda c: c.data in ["remove_loss","help_cuefa","super_shoot","super_save","new_desigh","ticket_private_tour"])
+@player_router.callback_query(lambda c: c.data in ["remove_loss","help_cuefa","super_shoot","super_save","new_desigh","ticket_private_tour", "gamble_bonus", "insurance_bonus"])
 async def bot_shop(callback_query: CallbackQuery):
     user_id = callback_query.from_user.id
     user_buy = callback_query.data
@@ -45,6 +57,8 @@ async def bot_shop(callback_query: CallbackQuery):
     elif user_buy == "super_save": user_buy_text = "Суперсейв"
     elif user_buy == "new_desigh": user_buy_text = "Эксклюзивный дизайн"
     elif user_buy == "ticket_private_tour": user_buy_text = "Билет на частный турнир"
+    elif user_buy == "gamble_bonus": user_buy_text = "Азарт"
+    elif user_buy == "insurance_bonus": user_buy_text = "Страховка"
     check_shop = await check_chop_el(user_id=user_id, sale_name=user_buy_text)
     shop_el_price = check_shop[0]
     if check_shop[1] > 0:

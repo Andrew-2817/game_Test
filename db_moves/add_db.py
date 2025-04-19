@@ -113,6 +113,8 @@ async def add_shop(user_id:int):
         ('Подсказка', 1500, 10),
         ('Суперудар', 1500, 10),
         ('Суперсейв', 1500, 10),
+        ('Страховка', 500, 10),
+        ('Азарт', 500, 10),
         ('Эксклюзивный дизайн', 3000, 1),
         ('Билет на частный турнир', 5000, 1),
         ]
@@ -217,6 +219,23 @@ async def change_user_design(user_id: int):
         UPDATE users
         SET premium_design = NOT premium_design
         WHERE user_id = $1
+        """, user_id)
+    finally:
+        await conn.close()
+
+
+async def remove_loss_in_game(user_id: int, game_id:int):
+    conn = await get_db_connection()
+    try:
+        await conn.fetch("""
+        UPDATE statistics
+        SET losses = losses -1
+        WHERE user_id = $1 and game_id = $2
+        """, user_id, game_id)
+        await conn.fetch("""
+        UPDATE shop
+        SET user_count = user_count-1
+        WHERE user_id = $1 and sale_name = 'Отмена поражения'
         """, user_id)
     finally:
         await conn.close()

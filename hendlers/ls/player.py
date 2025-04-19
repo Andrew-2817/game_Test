@@ -47,6 +47,7 @@ cached_photo_path23 = types.FSInputFile(os.path.join("img/premium", "chest_premi
 cached_photo_path24 = types.FSInputFile(os.path.join("img/premium", "games_premium.jpg"))
 cached_photo_path25 = types.FSInputFile(os.path.join("img/default", "statistic_default.jpg"))
 cached_photo_path26 = types.FSInputFile(os.path.join("img/premium", "play_game_premium.jpg"))
+cached_photo_path27 = types.FSInputFile(os.path.join("img", "remove_loss.jpg"))
 man = types.FSInputFile(os.path.join("img", "men.png"))
 
 

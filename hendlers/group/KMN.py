@@ -18,7 +18,6 @@ cached_photo_path5 = types.FSInputFile(os.path.join("img", "5711954.jpg"))
 cached_photo_path6 = types.FSInputFile(os.path.join("img", "tours2.jpg"))
 cached_photo_path7 = types.FSInputFile(os.path.join("img", "11698.jpg"))
 help_history = []
-help_penalty_text = []
 supershot_plus = 0
 pl1_choice = []
 pl2_choice = []
