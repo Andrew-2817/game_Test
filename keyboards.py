@@ -335,3 +335,21 @@ info_cuefa_keyboard = InlineKeyboardMarkup(inline_keyboard = [[info_cuefa_back]]
 
 
 # become_premium_keyboard = InlineKeyboardMarkup(inline_keyboard=[[become_premium]])
+
+#кнопки для игры в пенальти(ТУРНИР)
+# Кнопки для атакующего
+tournament_attack_left = InlineKeyboardButton(text="⚽️⬅️", callback_data="tournament_attack_left")
+tournament_attack_center = InlineKeyboardButton(text="⚽️⬆️", callback_data="tournament_attack_center")
+tournament_attack_right = InlineKeyboardButton(text="⚽️➡️", callback_data="tournament_attack_right")
+
+tournament_attack_buttons = InlineKeyboardMarkup(inline_keyboard=[
+    [tournament_attack_left, tournament_attack_center, tournament_attack_right]
+])
+# Кнопки для защитника(ТУРНИР)
+tournament_defense_left = InlineKeyboardButton(text="🧤⬅️", callback_data="tournament_defense_left")
+tournament_defense_center = InlineKeyboardButton(text="🧤⬆️", callback_data="tournament_defense_center")
+tournament_defense_right = InlineKeyboardButton(text="🧤➡️", callback_data="tournament_defense_right")
+
+tournament_defense_buttons = InlineKeyboardMarkup(inline_keyboard=[
+    [tournament_defense_left, tournament_defense_center, tournament_defense_right]
+])

@@ -17,6 +17,7 @@ from hendlers.ls.ranks import player_router
 from hendlers.group.KMN import KMN_router
 from hendlers.group.penalty import penalty_router
 from hendlers.group.stakanchiki import stakan_router
+from hendlers.ls.tournament_manager import manager_router, player_router
 
 
 load_dotenv()
@@ -31,12 +32,15 @@ dp.include_router(KMN_router)
 dp.include_router(penalty_router)
 dp.include_router(stakan_router)
 dp.include_router(ochko_router)
+dp.include_router(manager_router)
 
 async def main():
     
     await create_tables()
+    print("Бот запущен и готов к работе!")
     await dp.start_polling(bot)
 
 if __name__ == '__main__':
     import asyncio
     asyncio.run(main())
+
